@@ -5,113 +5,81 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc\Tests\Unit\Service;
 
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
-use PHPUnit\Framework\Attributes\DataProvider;
+use Contenir\Storage\Variant;
+use Contenir\Storage\VariantFit;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 #[Group('unit')]
 final class AssetUrlBuilderTest extends TestCase
 {
-    private function builder(string $base = ''): AssetUrlBuilder
+    public function testOriginalUrlIsRootRelativeWithEmptyBase(): void
     {
-        return new AssetUrlBuilder($base, [320, 480, 960]);
-    }
+        $builder = new AssetUrlBuilder('');
 
-    public function testOriginalUrlStripsLeadingSlashAndPrefixesBase(): void
-    {
-        $builder = $this->builder('');
-
-        self::assertSame('/asset/library/a/photo.jpg', $builder->originalUrl('/asset/library/a/photo.jpg'));
+        self::assertSame('/a/photo.jpg', $builder->originalUrl('/a/photo.jpg'));
     }
 
     public function testOriginalUrlHonoursPublicBase(): void
     {
-        $builder = $this->builder('https://cdn.example.com');
+        $builder = new AssetUrlBuilder('https://cdn.example.com');
+
+        self::assertSame('https://cdn.example.com/a/photo.jpg', $builder->originalUrl('/a/photo.jpg'));
+    }
+
+    public function testVariantUrlInsertsKeyedVariantDir(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        self::assertSame('/a/_variant/tile-320/photo.jpg', $builder->variantUrl('/a/photo.jpg', 'tile-320'));
+    }
+
+    public function testVariantUrlSwapsExtensionForFormat(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        self::assertSame('/a/_variant/tile-320/photo.avif', $builder->variantUrl('/a/photo.jpg', 'tile-320', 'avif'));
+    }
+
+    public function testVariantUrlForRootLevelFile(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        self::assertSame('/_variant/tile-320/photo.jpg', $builder->variantUrl('photo.jpg', 'tile-320'));
+    }
+
+    public function testStripsPublicBasePrefixToAvoidDoubling(): void
+    {
+        $builder = new AssetUrlBuilder('/asset/library');
 
         self::assertSame(
-            'https://cdn.example.com/asset/library/a/photo.jpg',
-            $builder->originalUrl('asset/library/a/photo.jpg'),
+            '/asset/library/a/_variant/tile-320/photo.jpg',
+            $builder->variantUrl('/asset/library/a/photo.jpg', 'tile-320'),
         );
     }
 
-    public function testVariantUrlBuildsVariantDirPathForBareWidth(): void
+    public function testSrcsetEmitsWidthDescriptorPerVariant(): void
     {
-        $builder = $this->builder();
-
-        self::assertSame(
-            '/asset/library/a/_variant/480x/photo.jpg',
-            $builder->variantUrl('asset/library/a/photo.jpg', 480),
-        );
-    }
-
-    public function testVariantUrlReplacesExtensionWhenFormatGiven(): void
-    {
-        $builder = $this->builder();
-
-        self::assertSame(
-            '/asset/library/a/_variant/480x/photo.webp',
-            $builder->variantUrl('asset/library/a/photo.jpg', '480x', 'webp'),
-        );
-    }
-
-    #[DataProvider('dimensionProvider')]
-    public function testVariantUrlAcceptsFlexibleDimensions(string|int $dimensions, string $expectedToken): void
-    {
-        $builder = $this->builder();
-
-        self::assertSame(
-            "/asset/d/_variant/{$expectedToken}/f.jpg",
-            $builder->variantUrl('asset/d/f.jpg', $dimensions),
-        );
-    }
-
-    /**
-     * @return array<string, array{0:string|int,1:string}>
-     */
-    public static function dimensionProvider(): array
-    {
-        return [
-            'bare int width'    => [480, '480x'],
-            'bare string width' => ['480', '480x'],
-            'width-bound token' => ['480x', '480x'],
-            'height-bound token' => ['x900', 'x900'],
-            'both axes token'   => ['480x900', '480x900'],
+        $builder  = new AssetUrlBuilder('');
+        $variants = [
+            new Variant('tile-320', 320, 240, VariantFit::Cover),
+            new Variant('tile-640', 640, 480, VariantFit::Cover),
         ];
-    }
-
-    public function testVariantUrlForFileAtRootHasNoLeadingDir(): void
-    {
-        $builder = $this->builder();
-
-        self::assertSame('/_variant/480x/photo.jpg', $builder->variantUrl('photo.jpg', 480));
-    }
-
-    public function testSrcsetUsesConfiguredWidthLadderByDefault(): void
-    {
-        $builder = $this->builder();
 
         self::assertSame(
-            '/asset/a/_variant/320x/f.jpg 320w, '
-            . '/asset/a/_variant/480x/f.jpg 480w, '
-            . '/asset/a/_variant/960x/f.jpg 960w',
-            $builder->srcset('asset/a/f.jpg'),
+            '/a/_variant/tile-320/photo.jpg 320w, /a/_variant/tile-640/photo.jpg 640w',
+            $builder->srcset('/a/photo.jpg', $variants),
         );
     }
 
-    public function testSrcsetAcceptsExplicitWidthsAndFormat(): void
+    public function testSrcsetAppliesFormat(): void
     {
-        $builder = $this->builder();
+        $builder  = new AssetUrlBuilder('');
+        $variants = [new Variant('tile-320', 320, 240, VariantFit::Cover)];
 
         self::assertSame(
-            '/asset/a/_variant/400x/f.avif 400w, /asset/a/_variant/800x/f.avif 800w',
-            $builder->srcset('asset/a/f.jpg', [400, 800], 'avif'),
+            '/a/_variant/tile-320/photo.webp 320w',
+            $builder->srcset('/a/photo.jpg', $variants, 'webp'),
         );
-    }
-
-    public function testGetVariantWidthsReturnsIntegers(): void
-    {
-        $builder = new AssetUrlBuilder('', ['320', '480']);
-
-        self::assertSame([320, 480], $builder->getVariantWidths());
     }
 }

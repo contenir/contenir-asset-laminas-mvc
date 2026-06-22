@@ -8,20 +8,24 @@ use Contenir\Asset\Laminas\Mvc\Service\VariantGenerator;
 use Laminas\Http\Response;
 use Laminas\Mvc\Controller\AbstractActionController;
 
+use function filesize;
 use function finfo_close;
 use function finfo_file;
 use function finfo_open;
+use function header;
+use function is_file;
+use function readfile;
+use function urldecode;
 
 use const FILEINFO_MIME_TYPE;
 
 /**
- * Serves responsive image variants on demand under
- * `/asset/<folder>/_variant/<dimensions>/<filename>`.
+ * Serves keyed image variants on demand under
+ * `/asset/<folder>/_variant/<name>/<filename>`.
  *
- * Existing variant files are served directly by the web server; only missing ones
- * reach this controller. Resolution and on-demand generation live in
- * {@see VariantGenerator}; this controller streams whatever file the generator
- * produces (or 404s when it cannot produce one).
+ * Existing variant files are served directly by the web server; only missing
+ * ones reach this controller, which materialises them via {@see VariantGenerator}
+ * and streams the result (or 404s when it cannot be produced).
  */
 final class AssetVariantController extends AbstractActionController
 {
@@ -32,12 +36,12 @@ final class AssetVariantController extends AbstractActionController
     public function indexAction(): Response
     {
         /** @var Response $response */
-        $response   = $this->getResponse();
-        $folder     = urldecode((string) $this->params('folder'));
-        $dimensions = (string) $this->params('dimensions');
-        $filename   = urldecode((string) $this->params('filename'));
+        $response = $this->getResponse();
+        $folder   = urldecode((string) $this->params('folder'));
+        $name     = (string) $this->params('name');
+        $filename = urldecode((string) $this->params('filename'));
 
-        $path = $this->generator->generate($folder, $dimensions, $filename);
+        $path = $this->generator->generate($folder, $name, $filename);
         if ($path === null || ! is_file($path)) {
             return $response->setStatusCode(404);
         }

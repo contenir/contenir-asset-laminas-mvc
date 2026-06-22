@@ -5,46 +5,54 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc\Service;
 
 use Contenir\Storage\Image\ImageResizer;
-use Contenir\Storage\VariantFit;
+use Contenir\Storage\Variant;
+use Throwable;
+
+use function basename;
+use function is_file;
+use function pathinfo;
+use function rtrim;
+use function sprintf;
+use function strtolower;
+use function strtoupper;
+use function trim;
+
+use const PATHINFO_EXTENSION;
+use const PATHINFO_FILENAME;
 
 /**
- * Resolves a requested image variant to a concrete file on disk, generating it on
- * demand via {@see ImageResizer} when missing.
+ * Resolves a requested keyed variant to a concrete file, generating it on demand
+ * via {@see ImageResizer} when missing.
  *
- * Given the URL parts `<folder>`, `<dimensions>` (Wx / xH / WxH) and `<filename>`
- * (whose extension carries the target format), it locates the source original by
- * basename, resizes it into `<folder>/_variant/<dimensions>/<base>.<fmt>` and
- * returns the produced path.
- *
- * Format fallback: when the requested format cannot be produced (e.g. the
- * ImageMagick build lacks AVIF), a source-format variant is generated and returned
- * instead, so callers can always serve valid image bytes rather than a 404.
+ * The variant definition (width, height, fit, quality) is looked up from
+ * {@see ProfileProviderService} by the variant name carried in the URL; the
+ * output format comes from the requested filename's extension, falling back to
+ * the source format when that format cannot be produced.
  */
 final class VariantGenerator
 {
     private const VARIANT_DIR = '_variant';
 
-    /** @var string[] Extensions considered valid resize sources. */
+    /** @var list<string> */
     private const SOURCE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'avif'];
 
     private string $assetRoot;
 
-    public function __construct(private ImageResizer $resizer, string $rootPath)
-    {
+    public function __construct(
+        private ImageResizer $resizer,
+        private ProfileProviderService $profiles,
+        string $rootPath,
+    ) {
         $this->assetRoot = rtrim($rootPath, '/');
     }
 
-    /**
-     * @return string|null Absolute-ish path to the variant file, or null when the
-     *                     source cannot be found / no variant can be produced.
-     */
-    public function generate(string $folder, string $dimensions, string $filename): ?string
+    public function generate(string $folder, string $name, string $filename): ?string
     {
         $folder   = trim($folder, '/');
         $filename = basename($filename);
 
-        [$width, $height] = $this->parseDimensions($dimensions);
-        if ($width <= 0 && $height <= 0) {
+        $variant = $this->profiles->variant($name);
+        if ($variant === null) {
             return null;
         }
 
@@ -53,57 +61,39 @@ final class VariantGenerator
             return null;
         }
 
-        $variantDir   = sprintf('%s/asset/%s/%s/%s', $this->assetRoot, $folder, self::VARIANT_DIR, $dimensions);
+        $variantDir   = sprintf('%s/asset/%s/%s/%s', $this->assetRoot, $folder, self::VARIANT_DIR, $name);
         $base         = pathinfo($filename, PATHINFO_FILENAME);
         $requestedExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
         $sourceExt    = strtolower(pathinfo($source, PATHINFO_EXTENSION));
-        $fit          = ($width > 0 && $height > 0) ? VariantFit::Cover : VariantFit::Contain;
 
         $dest = $variantDir . '/' . $base . '.' . $requestedExt;
-        if (is_file($dest)) {
+        if (is_file($dest) || $this->materialise($source, $dest, $variant)) {
             return $dest;
         }
 
-        try {
-            $this->resizer->resize($source, $dest, $width, $height, $fit);
-
-            return $dest;
-        } catch (\Throwable) {
-            // Requested format unproducible — fall back to the source format.
-        }
-
+        // Requested format unproducible (e.g. no AVIF encoder) — fall back to source format.
         $fallback = $variantDir . '/' . $base . '.' . $sourceExt;
-        if (is_file($fallback)) {
+        if (is_file($fallback) || $this->materialise($source, $fallback, $variant)) {
             return $fallback;
         }
 
-        try {
-            $this->resizer->resize($source, $fallback, $width, $height, $fit);
-
-            return $fallback;
-        } catch (\Throwable) {
-            return null;
-        }
+        return null;
     }
 
-    /**
-     * @return array{0:int,1:int} [width, height]; a zero means "auto" for that axis.
-     */
-    private function parseDimensions(string $dimensions): array
+    private function materialise(string $source, string $dest, Variant $variant): bool
     {
-        if (! str_contains($dimensions, 'x')) {
-            return [0, 0];
+        try {
+            $this->resizer->resize($source, $dest, $variant->width, $variant->height, $variant->fit, $variant->quality);
+
+            return true;
+        } catch (Throwable) {
+            return false;
         }
-
-        [$w, $h] = explode('x', $dimensions, 2);
-
-        return [(int) $w, (int) $h];
     }
 
     /**
-     * Resolve the source original on disk by basename within <folder>, regardless
-     * of the requested variant's extension (the URL carries the target format, not
-     * the source format).
+     * Resolve the source original on disk by basename within <folder>, ignoring
+     * the requested variant extension (the URL carries the target format).
      */
     private function resolveSource(string $folder, string $filename): ?string
     {
@@ -116,13 +106,11 @@ final class VariantGenerator
         }
 
         foreach (self::SOURCE_EXTENSIONS as $ext) {
-            $candidate = $dir . '/' . $base . '.' . $ext;
-            if (is_file($candidate)) {
-                return $candidate;
-            }
-            $candidate = $dir . '/' . $base . '.' . strtoupper($ext);
-            if (is_file($candidate)) {
-                return $candidate;
+            foreach ([$ext, strtoupper($ext)] as $candidateExt) {
+                $candidate = $dir . '/' . $base . '.' . $candidateExt;
+                if (is_file($candidate)) {
+                    return $candidate;
+                }
             }
         }
 

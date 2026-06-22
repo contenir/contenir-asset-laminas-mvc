@@ -14,31 +14,26 @@ final class StorageUrlTest extends TestCase
 {
     private function helper(): StorageUrl
     {
-        return new StorageUrl(new AssetUrlBuilder('', [480]));
+        return new StorageUrl(new AssetUrlBuilder(''));
     }
 
-    public function testReturnsEmptyForNullPath(): void
+    public function testReturnsEmptyStringForNullPath(): void
     {
         self::assertSame('', ($this->helper())(null));
     }
 
-    public function testReturnsEmptyForEmptyPath(): void
+    public function testReturnsOriginalWhenNoVariantGiven(): void
     {
-        self::assertSame('', ($this->helper())(''));
+        self::assertSame('/a/photo.jpg', ($this->helper())('/a/photo.jpg'));
     }
 
-    public function testReturnsOriginalWhenNoDimensions(): void
+    public function testReturnsVariantUrl(): void
     {
-        self::assertSame('/asset/a/f.jpg', ($this->helper())('asset/a/f.jpg'));
+        self::assertSame('/a/_variant/tile-640/photo.jpg', ($this->helper())('/a/photo.jpg', 'tile-640'));
     }
 
-    public function testReturnsVariantWhenDimensionsGiven(): void
+    public function testReturnsVariantUrlInRequestedFormat(): void
     {
-        self::assertSame('/asset/a/_variant/480x/f.jpg', ($this->helper())('asset/a/f.jpg', 480));
-    }
-
-    public function testReturnsVariantWithFormat(): void
-    {
-        self::assertSame('/asset/a/_variant/480x/f.webp', ($this->helper())('asset/a/f.jpg', '480x', 'webp'));
+        self::assertSame('/a/_variant/tile-640/photo.webp', ($this->helper())('/a/photo.jpg', 'tile-640', 'webp'));
     }
 }

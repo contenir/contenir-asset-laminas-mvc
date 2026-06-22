@@ -1,0 +1,118 @@
+<?php
+
+declare(strict_types=1);
+
+namespace Contenir\Asset\Laminas\Mvc\Tests\Unit\Service;
+
+use Contenir\Asset\Laminas\Mvc\Profile\Profile;
+use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
+use Contenir\Storage\Variant;
+use Contenir\Storage\VariantFit;
+use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\TestCase;
+
+use function array_map;
+
+#[Group('unit')]
+final class ProfileProviderServiceTest extends TestCase
+{
+    private function provider(): ProfileProviderService
+    {
+        return new ProfileProviderService([
+            'tile'    => [
+                'sizes'    => '(min-width: 768px) 33vw, 100vw',
+                'formats'  => ['AVIF', 'WebP'],
+                'variants' => [
+                    'admin-thumb' => ['width' => 180, 'height' => 180, 'fit' => 'contain'],
+                    'tile-320'    => ['width' => 320, 'height' => 240, 'fit' => 'cover', 'quality' => 80],
+                    'tile-640'    => ['width' => 640, 'height' => 480, 'fit' => 'cover'],
+                ],
+            ],
+            'gallery' => [
+                'variants' => [
+                    'gallery-1600' => ['width' => 1600, 'fit' => 'contain'],
+                ],
+            ],
+            'bogus'   => 'not-an-array',
+        ]);
+    }
+
+    public function testHasReportsKnownProfiles(): void
+    {
+        $provider = $this->provider();
+
+        self::assertTrue($provider->has('tile'));
+        self::assertFalse($provider->has('missing'));
+    }
+
+    public function testGetReturnsTypedProfileWithLowercasedFormats(): void
+    {
+        $profile = $this->provider()->get('tile');
+
+        self::assertInstanceOf(Profile::class, $profile);
+        self::assertSame('tile', $profile->key);
+        self::assertSame('(min-width: 768px) 33vw, 100vw', $profile->sizes);
+        self::assertSame(['avif', 'webp'], $profile->formats);
+    }
+
+    public function testGetExcludesPreviewVariantFromResponsiveList(): void
+    {
+        $profile = $this->provider()->get('tile');
+
+        self::assertNotNull($profile);
+        $names = array_map(static fn (Variant $variant): string => $variant->name, $profile->variants);
+        self::assertSame(['tile-320', 'tile-640'], $names);
+    }
+
+    public function testGetReturnsNullForUnknownProfile(): void
+    {
+        self::assertNull($this->provider()->get('missing'));
+    }
+
+    public function testVariantReturnsFlatDefinitionIncludingPreview(): void
+    {
+        $preview = $this->provider()->variant('admin-thumb');
+
+        self::assertInstanceOf(Variant::class, $preview);
+        self::assertSame(180, $preview->width);
+    }
+
+    public function testVariantMapsDimensionsFitAndQuality(): void
+    {
+        $variant = $this->provider()->variant('tile-320');
+
+        self::assertNotNull($variant);
+        self::assertSame(320, $variant->width);
+        self::assertSame(240, $variant->height);
+        self::assertSame(VariantFit::Cover, $variant->fit);
+        self::assertSame(80, $variant->quality);
+    }
+
+    public function testVariantDefaultsFitToCoverAndNullQuality(): void
+    {
+        $variant = $this->provider()->variant('tile-640');
+
+        self::assertNotNull($variant);
+        self::assertSame(VariantFit::Cover, $variant->fit);
+        self::assertNull($variant->quality);
+    }
+
+    public function testVariantMapsContainFitAndAutoHeight(): void
+    {
+        $variant = $this->provider()->variant('gallery-1600');
+
+        self::assertNotNull($variant);
+        self::assertSame(VariantFit::Contain, $variant->fit);
+        self::assertSame(0, $variant->height);
+    }
+
+    public function testVariantReturnsNullForUnknownName(): void
+    {
+        self::assertNull($this->provider()->variant('nope'));
+    }
+
+    public function testNonArrayProfileIsSkipped(): void
+    {
+        self::assertFalse($this->provider()->has('bogus'));
+    }
+}

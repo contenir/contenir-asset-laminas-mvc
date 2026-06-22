@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc\Tests\Unit\View\Helper;
 
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
+use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\View\Helper\StorageSrcSet;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
@@ -14,32 +15,32 @@ final class StorageSrcSetTest extends TestCase
 {
     private function helper(): StorageSrcSet
     {
-        return new StorageSrcSet(new AssetUrlBuilder('', [320, 480]));
+        $profiles = new ProfileProviderService([
+            'tile' => [
+                'variants' => [
+                    'tile-320' => ['width' => 320, 'height' => 240, 'fit' => 'cover'],
+                    'tile-640' => ['width' => 640, 'height' => 480, 'fit' => 'cover'],
+                ],
+            ],
+        ]);
+
+        return new StorageSrcSet($profiles, new AssetUrlBuilder(''));
     }
 
-    public function testReturnsEmptyForNullPath(): void
+    public function testReturnsEmptyStringForNullPath(): void
     {
-        self::assertSame('', ($this->helper())(null));
+        self::assertSame('', ($this->helper())(null, 'tile'));
     }
 
-    public function testReturnsEmptyForEmptyPath(): void
+    public function testReturnsEmptyStringForUnknownProfile(): void
     {
-        self::assertSame('', ($this->helper())(''));
+        self::assertSame('', ($this->helper())('/a/photo.jpg', 'nope'));
     }
 
-    public function testRendersLadderSrcset(): void
+    public function testRendersSrcsetOverProfileVariants(): void
     {
-        self::assertSame(
-            '/asset/a/_variant/320x/f.jpg 320w, /asset/a/_variant/480x/f.jpg 480w',
-            ($this->helper())('asset/a/f.jpg'),
-        );
-    }
+        $expected = '/a/_variant/tile-320/photo.jpg 320w, /a/_variant/tile-640/photo.jpg 640w';
 
-    public function testRendersExplicitWidthsAndFormat(): void
-    {
-        self::assertSame(
-            '/asset/a/_variant/600x/f.webp 600w',
-            ($this->helper())('asset/a/f.jpg', [600], 'webp'),
-        );
+        self::assertSame($expected, ($this->helper())('/a/photo.jpg', 'tile'));
     }
 }

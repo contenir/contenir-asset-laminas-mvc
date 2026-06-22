@@ -8,12 +8,13 @@ use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Laminas\View\Helper\AbstractHelper;
 
 /**
- * Render a single asset URL — the original when no dimensions are given, otherwise
- * the matching `/_variant/<dimensions>/` variant URL.
+ * Render a single asset URL — the original, or a specific named variant
+ * (optionally in a given format):
  *
- * Returns the raw URL — escaping is the output context's job (htmlAttributes()
- * escapes; direct echo of these asset paths is safe). Escaping here as well would
- * double-encode when the value is passed through htmlAttributes().
+ *   <a href="<?= $this->storageUrl($asset->path) ?>">original</a>
+ *   <img src="<?= $this->storageUrl($asset->path, 'tile-640') ?>">
+ *
+ * Returns the raw URL — escaping is the output context's job.
  */
 final class StorageUrl extends AbstractHelper
 {
@@ -21,14 +22,14 @@ final class StorageUrl extends AbstractHelper
     {
     }
 
-    public function __invoke(?string $path, string|int|null $dimensions = null, ?string $format = null): string
+    public function __invoke(?string $path, ?string $variant = null, ?string $format = null): string
     {
         if ($path === null || $path === '') {
             return '';
         }
 
-        return $dimensions === null
+        return $variant === null || $variant === ''
             ? $this->urls->originalUrl($path)
-            : $this->urls->variantUrl($path, $dimensions, $format);
+            : $this->urls->variantUrl($path, $variant, $format);
     }
 }

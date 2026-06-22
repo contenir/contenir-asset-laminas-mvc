@@ -4,17 +4,26 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Service;
 
+use Contenir\Storage\Variant;
+
+use function basename;
+use function dirname;
+use function implode;
+use function ltrim;
+use function preg_replace;
+use function rtrim;
+use function sprintf;
+use function str_starts_with;
+use function strlen;
+use function substr;
+
 /**
- * Pure string URL builder for on-demand image variants.
+ * Builds public URLs for stored assets and their keyed variants, matching the
+ * contenir/storage LocalFilesystem layout: a variant of `<dir>/file.jpg` lives
+ * at `<dir>/_variant/<name>/file.<fmt>`.
  *
- * A variant of `/dir/file.jpg` lives at `/dir/_variant/<dimensions>/file.<fmt>`,
- * where `<dimensions>` is `Wx` / `xH` / `WxH` (e.g. `480x`, `x900`, `480x900`) and
- * `<fmt>` is the source extension, `webp`, or `avif`. Missing variants are
- * generated lazily by AssetVariantController on first request.
- *
- * Returns RAW URLs — escaping is the output context's job (htmlAttributes()
- * escapes; direct echo of these sanitised asset paths is safe). Escaping here too
- * would double-encode when the value passes through htmlAttributes().
+ * Returns RAW strings — escaping is the output context's job (htmlAttributes()
+ * escapes; direct echo of these clean asset paths is safe).
  */
 final class AssetUrlBuilder
 {
@@ -22,77 +31,59 @@ final class AssetUrlBuilder
 
     private string $publicBase;
 
-    /** @var int[] */
-    private array $variantWidths;
-
-    /**
-     * @param int[] $variantWidths
-     */
-    public function __construct(string $publicBase, array $variantWidths)
+    public function __construct(string $publicBase)
     {
-        $this->publicBase    = rtrim($publicBase, '/');
-        $this->variantWidths = array_map('intval', $variantWidths);
+        $this->publicBase = rtrim($publicBase, '/');
     }
 
     public function originalUrl(string $path): string
     {
-        return $this->absolute(ltrim($path, '/'));
+        return $this->absolute($this->key($path));
     }
 
-    /**
-     * @param string|int $dimensions A `Wx`/`xH`/`WxH` token, or a bare width (int|"480").
-     */
-    public function variantUrl(string $path, string|int $dimensions, ?string $format = null): string
+    public function variantUrl(string $path, string $name, ?string $format = null): string
     {
-        $dimensions = $this->normaliseDimensions($dimensions);
-        $path       = ltrim($path, '/');
-        $dir        = $this->dirname($path);
-        $file       = basename($path);
+        $key  = $this->key($path);
+        $dir  = $this->dirname($key);
+        $file = basename($key);
 
         if ($format !== null && $format !== '') {
             $file = preg_replace('/\.[^.\/]+$/', '.' . $format, $file) ?? $file . '.' . $format;
         }
 
-        $key = $dir === ''
-            ? sprintf('%s/%s/%s', self::VARIANT_DIR, $dimensions, $file)
-            : sprintf('%s/%s/%s/%s', $dir, self::VARIANT_DIR, $dimensions, $file);
+        $variantKey = $dir === ''
+            ? sprintf('%s/%s/%s', self::VARIANT_DIR, $name, $file)
+            : sprintf('%s/%s/%s/%s', $dir, self::VARIANT_DIR, $name, $file);
 
-        return $this->absolute($key);
+        return $this->absolute($variantKey);
     }
 
     /**
-     * Responsive srcset over the width ladder. Each entry is a width-bound (`Wx`)
-     * variant with a `<width>w` descriptor.
-     *
-     * @param int[]|null $widths
+     * @param list<Variant> $variants
      */
-    public function srcset(string $path, ?array $widths = null, ?string $format = null): string
+    public function srcset(string $path, array $variants, ?string $format = null): string
     {
-        $widths ??= $this->variantWidths;
-
         $entries = [];
-        foreach ($widths as $width) {
-            $width     = (int) $width;
-            $entries[] = $this->variantUrl($path, $width . 'x', $format) . ' ' . $width . 'w';
+        foreach ($variants as $variant) {
+            $entries[] = $this->variantUrl($path, $variant->name, $format) . ' ' . $variant->width . 'w';
         }
 
         return implode(', ', $entries);
     }
 
-    /** @return int[] */
-    public function getVariantWidths(): array
-    {
-        return $this->variantWidths;
-    }
-
     /**
-     * A bare width ("480" or 480) becomes the width-bound token "480x".
+     * Strip the public-path prefix so the key is relative to the asset root —
+     * otherwise the URL doubles up to /asset/library/asset/library/...
      */
-    private function normaliseDimensions(string|int $dimensions): string
+    private function key(string $path): string
     {
-        $dimensions = (string) $dimensions;
+        $path   = ltrim($path, '/');
+        $prefix = ltrim($this->publicBase, '/');
+        if ($prefix !== '' && str_starts_with($path, $prefix . '/')) {
+            $path = substr($path, strlen($prefix) + 1);
+        }
 
-        return str_contains($dimensions, 'x') ? $dimensions : $dimensions . 'x';
+        return $path;
     }
 
     private function dirname(string $path): string

@@ -13,9 +13,6 @@ final class AssetUrlBuilderFactory
     {
         $config = $container->get('config')['storage']['asset'] ?? [];
 
-        return new AssetUrlBuilder(
-            (string) ($config['public_path'] ?? ''),
-            $config['variant_widths'] ?? [320, 480, 600, 760, 960, 1280, 1440, 1920, 2560],
-        );
+        return new AssetUrlBuilder((string) ($config['public_path'] ?? ''));
     }
 }

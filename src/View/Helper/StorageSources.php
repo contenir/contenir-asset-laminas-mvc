@@ -5,50 +5,54 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc\View\Helper;
 
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
+use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Laminas\View\Helper\AbstractHelper;
 
+use function sprintf;
+
 /**
- * Emit responsive <source> elements (AVIF, WebP) for a stored asset path, to be
- * placed inside a <picture> before the <img> fallback. The browser picks the
- * first <source> whose type it supports; the <img> (original jpg/png) is the
- * final fallback.
+ * Render `<source>` elements for a `<picture>`, one per extra output format
+ * declared on the profile (e.g. AVIF then WebP), each carrying the profile's
+ * `sizes` attribute:
  *
- * Uses lazy attributes (data-lazysrc-srcset) so the framework Lazysrc component —
- * mounted on the sibling <img data-lazysrc> — defers loading. Returns raw HTML;
- * the srcset values are sanitised asset paths.
+ *   <picture>
+ *     <?= $this->storageSources($asset->path, 'tile') ?>
+ *     <img ... srcset="<?= $this->storageSrcSet($asset->path, 'tile') ?>"
+ *          sizes="<?= $this->storageSizes('tile') ?>">
+ *   </picture>
+ *
+ * Returns raw markup — asset paths are clean and the sizes value is config.
  */
 final class StorageSources extends AbstractHelper
 {
-    /** @var string[] */
-    private array $formats;
-
-    /**
-     * @param string[] $formats
-     */
-    public function __construct(private AssetUrlBuilder $urls, array $formats = ['avif', 'webp'])
-    {
-        $this->formats = $formats;
+    public function __construct(
+        private ProfileProviderService $profiles,
+        private AssetUrlBuilder $urls,
+    ) {
     }
 
-    /**
-     * @param int[]|null $widths
-     */
-    public function __invoke(?string $path, ?array $widths = null, ?string $sizes = null): string
+    public function __invoke(?string $path, string $profile): string
     {
         if ($path === null || $path === '') {
             return '';
         }
 
-        $html = '';
-        foreach ($this->formats as $format) {
-            $html .= sprintf(
-                '<source type="image/%s" data-lazysrc-srcset="%s"%s>',
+        $definition = $this->profiles->get($profile);
+        if ($definition === null || $definition->variants === []) {
+            return '';
+        }
+
+        $output = '';
+        foreach ($definition->formats as $format) {
+            $srcset = $this->urls->srcset($path, $definition->variants, $format);
+            $output .= sprintf(
+                '<source type="image/%s" srcset="%s"%s>',
                 $format,
-                $this->urls->srcset($path, $widths, $format),
-                $sizes !== null && $sizes !== '' ? ' data-lazysrc-sizes="' . $sizes . '"' : ''
+                $srcset,
+                $definition->sizes === '' ? '' : sprintf(' sizes="%s"', $definition->sizes),
             );
         }
 
-        return $html;
+        return $output;
     }
 }
