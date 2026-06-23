@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc;
 
 use Contenir\Storage\Image\ImageResizer;
+use Laminas\Router\Http\Literal;
 use Laminas\Router\Http\Regex;
 
 /**
@@ -67,6 +68,16 @@ final class ConfigProvider
                         'spec'     => '/asset/%folder%/_variant/%name%/%filename%',
                     ],
                 ],
+                'assetvariant-generate' => [
+                    'type'    => Literal::class,
+                    'options' => [
+                        'route'    => '/asset-variant/generate',
+                        'defaults' => [
+                            'controller' => Controller\AssetVariantGenerateController::class,
+                            'action'     => 'generate',
+                        ],
+                    ],
+                ],
             ],
         ];
     }
@@ -79,6 +90,8 @@ final class ConfigProvider
         return [
             'factories' => [
                 Controller\AssetVariantController::class => Controller\Factory\AssetVariantControllerFactory::class,
+                Controller\AssetVariantGenerateController::class =>
+                    Controller\Factory\AssetVariantGenerateControllerFactory::class,
             ],
         ];
     }
@@ -93,6 +106,7 @@ final class ConfigProvider
                 Service\ProfileProviderService::class => Service\Factory\ProfileProviderServiceFactory::class,
                 Service\AssetUrlBuilder::class        => Service\Factory\AssetUrlBuilderFactory::class,
                 Service\VariantGenerator::class       => Service\Factory\VariantGeneratorFactory::class,
+                Service\OnDemandVariantResolver::class => Service\Factory\OnDemandVariantResolverFactory::class,
                 ImageResizer::class                   => Service\Factory\ImageResizerFactory::class,
             ],
         ];
