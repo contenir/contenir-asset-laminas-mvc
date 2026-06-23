@@ -21,6 +21,11 @@ use function sprintf;
  *          sizes="<?= $this->storageSizes('tile') ?>">
  *   </picture>
  *
+ * Pass $lazy = true to emit `data-lazysrc-srcset` instead of `srcset`, so a
+ * data-attribute lazy-loader can defer the avif/webp sources the same way it
+ * defers the <img>; without it a live <source srcset> would fetch eagerly and
+ * defeat lazy loading.
+ *
  * Returns raw markup — asset paths are clean and the sizes value is config.
  */
 final class StorageSources extends AbstractHelper
@@ -31,7 +36,7 @@ final class StorageSources extends AbstractHelper
     ) {
     }
 
-    public function __invoke(?string $path, string $profile): string
+    public function __invoke(?string $path, string $profile, bool $lazy = false): string
     {
         if ($path === null || $path === '') {
             return '';
@@ -42,12 +47,15 @@ final class StorageSources extends AbstractHelper
             return '';
         }
 
+        $srcsetAttr = $lazy ? 'data-lazysrc-srcset' : 'srcset';
+
         $output = '';
         foreach ($definition->formats as $format) {
             $srcset = $this->urls->srcset($path, $definition->variants, $format);
             $output .= sprintf(
-                '<source type="image/%s" srcset="%s"%s>',
+                '<source type="image/%s" %s="%s"%s>',
                 $format,
+                $srcsetAttr,
                 $srcset,
                 $definition->sizes === '' ? '' : sprintf(' sizes="%s"', $definition->sizes),
             );

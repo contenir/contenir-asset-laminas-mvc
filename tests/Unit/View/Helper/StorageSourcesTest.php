@@ -54,4 +54,15 @@ final class StorageSourcesTest extends TestCase
             $html,
         );
     }
+
+    public function testLazyModeEmitsDataLazysrcSrcset(): void
+    {
+        $html = ($this->helper())('/a/photo.jpg', 'tile', true);
+
+        self::assertStringContainsString(
+            '<source type="image/avif" data-lazysrc-srcset="/a/_variant/tile-320/photo.avif 320w" sizes="100vw">',
+            $html,
+        );
+        self::assertStringNotContainsString(' srcset="', $html, 'Lazy mode must not emit a live srcset attribute.');
+    }
 }
