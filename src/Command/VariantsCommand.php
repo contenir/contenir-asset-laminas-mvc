@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Command;
 
+use Contenir\Storage\Config\VariantProfile;
 use Contenir\Storage\Entry;
 use Contenir\Storage\ListOptions;
 use Contenir\Storage\OnDemandVariantGeneratorInterface;
@@ -17,7 +18,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 use Throwable;
 
 use function array_filter;
-use function array_keys;
 use function array_map;
 use function array_unique;
 use function array_values;
@@ -78,7 +78,13 @@ final class VariantsCommand extends Command
                 'Comma-separated modern format(s); the source extension is always included.',
                 'avif,webp',
             )
-            ->addOption('prefix', null, InputOption::VALUE_REQUIRED, 'Only process originals under this key prefix.', '')
+            ->addOption(
+                'prefix',
+                null,
+                InputOption::VALUE_REQUIRED,
+                'Only process originals under this key prefix.',
+                '',
+            )
             ->addOption('limit', null, InputOption::VALUE_REQUIRED, 'Process at most N originals.', '0')
             ->addOption('generate', 'g', InputOption::VALUE_NONE, 'Generate the missing variants (default: report).');
     }
@@ -201,14 +207,27 @@ final class VariantsCommand extends Command
         // variant registry is built from storage.profiles.<name>.variants. Fall
         // back to the front-end settings.storage.profiles for sites that share
         // one namespace.
-        $variants = $this->config['storage']['profiles'][$profileName]['variants']
+        $declared = $this->config['storage']['profiles'][$profileName]['variants']
             ?? $this->config['settings']['storage']['profiles'][$profileName]['variants']
             ?? [];
+        if (! is_array($declared)) {
+            return [];
+        }
 
-        return array_values(array_filter(array_map(
-            'strval',
-            array_keys(is_array($variants) ? $variants : []),
-        )));
+        $names = [];
+        foreach ($declared as $name => $entry) {
+            // Art-directed family: expand its `dimensions` ladder to the rung
+            // names (card-320, …). Flat entries contribute their own name.
+            if (is_array($entry) && isset($entry['dimensions'])) {
+                foreach (VariantProfile::fromArray((string) $name, $entry)->variants as $variant) {
+                    $names[] = $variant->name;
+                }
+                continue;
+            }
+            $names[] = (string) $name;
+        }
+
+        return array_values(array_filter($names));
     }
 
     /**

@@ -102,4 +102,25 @@ final class VariantsCommandTest extends TestCase
         // avif already present → only the source jpg is generated.
         self::assertSame(['gallery/cat__hero-480.jpg'], $storage->generated);
     }
+
+    public function testExpandsDimensionFamilyToRungVariants(): void
+    {
+        $storage = new FakeOnDemandStorage(['gallery/cat.jpg']);
+        $manager = new StorageManager();
+        $manager->register('assets', $storage);
+        $config = [
+            'storage' => ['profiles' => ['assets' => ['variants' => [
+                'card' => ['fit' => 'cover', 'dimensions' => ['320x320', '480x480']],
+            ]]]],
+        ];
+        $tester = new CommandTester(new VariantsCommand($manager, $config));
+
+        $tester->execute(['--profile' => 'assets', '--format' => 'avif', '--generate' => true]);
+
+        // The family expands to card-320 + card-480, each as {jpg source, avif}.
+        self::assertContains('gallery/cat__card-320.avif', $storage->generated);
+        self::assertContains('gallery/cat__card-480.avif', $storage->generated);
+        self::assertContains('gallery/cat__card-320.jpg', $storage->generated);
+        self::assertCount(4, $storage->generated);
+    }
 }
