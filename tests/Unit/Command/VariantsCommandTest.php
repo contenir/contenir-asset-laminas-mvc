@@ -19,15 +19,16 @@ final class VariantsCommandTest extends TestCase
         $manager = new StorageManager();
         $manager->register('assets', $storage);
 
+        // Mirrors a real site: the storage (generation) profile + its variant
+        // registry live under storage.profiles.<name>, NOT settings.storage.profiles
+        // (which holds the front-end art-directed profiles).
         $config = [
-            'settings' => [
-                'storage' => [
-                    'profiles' => [
-                        'assets' => [
-                            'variants' => [
-                                'hero-480' => ['width' => 480],
-                                'card-320' => ['width' => 320],
-                            ],
+            'storage' => [
+                'profiles' => [
+                    'assets' => [
+                        'variants' => [
+                            'hero-480' => ['width' => 480],
+                            'card-320' => ['width' => 320],
                         ],
                     ],
                 ],

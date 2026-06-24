@@ -197,10 +197,13 @@ final class VariantsCommand extends Command
             )));
         }
 
-        $profiles = $this->config['settings']['storage']['profiles']
-            ?? $this->config['storage']['profiles']
+        // --profile names a STORAGE profile (StorageManager::get()), whose
+        // variant registry is built from storage.profiles.<name>.variants. Fall
+        // back to the front-end settings.storage.profiles for sites that share
+        // one namespace.
+        $variants = $this->config['storage']['profiles'][$profileName]['variants']
+            ?? $this->config['settings']['storage']['profiles'][$profileName]['variants']
             ?? [];
-        $variants = $profiles[$profileName]['variants'] ?? [];
 
         return array_values(array_filter(array_map(
             'strval',
