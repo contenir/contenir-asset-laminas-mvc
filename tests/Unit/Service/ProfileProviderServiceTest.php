@@ -115,4 +115,58 @@ final class ProfileProviderServiceTest extends TestCase
     {
         self::assertFalse($this->provider()->has('bogus'));
     }
+
+    public function testCompilesDimensionFamilyToProfileAndExpandedVariants(): void
+    {
+        $provider = new ProfileProviderService([
+            'card' => [
+                'fit'        => 'cover',
+                'quality'    => 75,
+                'formats'    => ['AVIF', 'WebP'],
+                'sizes'      => '(min-width: 1024px) 33vw, 100vw',
+                'dimensions' => ['320x320', '480x480', '768x768'],
+            ],
+        ]);
+
+        $profile = $provider->get('card');
+        self::assertInstanceOf(Profile::class, $profile);
+        self::assertSame('(min-width: 1024px) 33vw, 100vw', $profile->sizes);
+        self::assertSame(['avif', 'webp'], $profile->formats);
+        self::assertSame(
+            ['card-320', 'card-480', 'card-768'],
+            array_map(static fn (Variant $variant): string => $variant->name, $profile->variants),
+        );
+
+        $variant = $provider->variant('card-480');
+        self::assertNotNull($variant);
+        self::assertSame(480, $variant->width);
+        self::assertSame(480, $variant->height);
+        self::assertSame(VariantFit::Cover, $variant->fit);
+    }
+
+    public function testFlatStandaloneVariantIsRegisteredButNotAProfile(): void
+    {
+        $provider = new ProfileProviderService([
+            'admin-thumb' => ['width' => 180, 'height' => 180, 'fit' => 'contain'],
+        ]);
+
+        self::assertFalse($provider->has('admin-thumb'));
+        $variant = $provider->variant('admin-thumb');
+        self::assertNotNull($variant);
+        self::assertSame(180, $variant->width);
+    }
+
+    public function testPreviewRoleFamilyRegistersVariantsWithoutProfile(): void
+    {
+        $provider = new ProfileProviderService([
+            'thumb' => [
+                'role'       => 'preview',
+                'fit'        => 'contain',
+                'dimensions' => ['180x180'],
+            ],
+        ]);
+
+        self::assertFalse($provider->has('thumb'));
+        self::assertNotNull($provider->variant('thumb-180'));
+    }
 }

@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc\Service;
 
 use Contenir\Asset\Laminas\Mvc\Profile\Profile;
+use Contenir\Storage\Config\VariantProfile;
 use Contenir\Storage\Variant;
 use Contenir\Storage\VariantFit;
 
@@ -13,8 +14,15 @@ use function is_array;
 use function strtolower;
 
 /**
- * Reads the shared `settings.storage.profiles` config (the same config the CMS
- * consumes) and exposes it as typed {@see Profile} / {@see Variant} objects.
+ * Exposes the art-directed image profiles as typed {@see Profile} / {@see Variant}
+ * objects for the front-end helpers.
+ *
+ * A profile declared with a `dimensions` ladder is compiled by the shared
+ * {@see VariantProfile} — the same declaration the generator materialises — so the
+ * family lives in a single place. The legacy form (an explicit `variants` map) is
+ * still accepted during migration, as is a flat standalone variant (e.g. the
+ * `admin-thumb` preview) which is registered for lookup but never exposed as a
+ * responsive profile.
  *
  * Variant names are globally unique across profiles, so a bare name — all a
  * request URL carries — resolves to exactly one definition.
@@ -31,7 +39,7 @@ final class ProfileProviderService
     private array $variants = [];
 
     /**
-     * @param array<string, mixed> $profiles The `settings.storage.profiles` array.
+     * @param array<string, mixed> $profiles Art-directed profile declarations.
      */
     public function __construct(array $profiles)
     {
@@ -40,32 +48,21 @@ final class ProfileProviderService
                 continue;
             }
 
-            $responsive = [];
-            foreach ((array) ($config['variants'] ?? []) as $name => $variantConfig) {
-                $name = (string) $name;
-                if (! is_array($variantConfig)) {
-                    continue;
-                }
-
-                $variant               = $this->buildVariant($name, $variantConfig);
-                $this->variants[$name] = $variant;
-                if ($name !== self::PREVIEW_VARIANT) {
-                    $responsive[] = $variant;
-                }
+            if (isset($config['dimensions'])) {
+                $this->addFamily((string) $key, $config);
+                continue;
             }
 
-            $formats = [];
-            foreach ((array) ($config['formats'] ?? []) as $format) {
-                $formats[] = strtolower((string) $format);
+            if (isset($config['variants'])) {
+                $this->addLegacyProfile((string) $key, $config);
+                continue;
             }
 
-            $key                  = (string) $key;
-            $this->profiles[$key] = new Profile(
-                $key,
-                (string) ($config['sizes'] ?? ''),
-                $formats,
-                array_values($responsive),
-            );
+            // Flat standalone variant (e.g. the admin-thumb preview): registered
+            // for lookup, never a responsive profile.
+            if (isset($config['width'])) {
+                $this->variants[(string) $key] = $this->buildVariant((string) $key, $config);
+            }
         }
     }
 
@@ -82,6 +79,70 @@ final class ProfileProviderService
     public function variant(string $name): ?Variant
     {
         return $this->variants[$name] ?? null;
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function addFamily(string $key, array $config): void
+    {
+        $profile = VariantProfile::fromArray($key, $config);
+        foreach ($profile->variants as $variant) {
+            $this->variants[$variant->name] = $variant;
+        }
+
+        if ($profile->isPreview) {
+            return;
+        }
+
+        $this->profiles[$key] = new Profile(
+            $key,
+            $profile->sizes,
+            $this->formats($config),
+            $profile->variants,
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     */
+    private function addLegacyProfile(string $key, array $config): void
+    {
+        $responsive = [];
+        foreach ((array) $config['variants'] as $name => $variantConfig) {
+            $name = (string) $name;
+            if (! is_array($variantConfig)) {
+                continue;
+            }
+
+            $variant               = $this->buildVariant($name, $variantConfig);
+            $this->variants[$name] = $variant;
+            if ($name !== self::PREVIEW_VARIANT) {
+                $responsive[] = $variant;
+            }
+        }
+
+        $this->profiles[$key] = new Profile(
+            $key,
+            (string) ($config['sizes'] ?? ''),
+            $this->formats($config),
+            array_values($responsive),
+        );
+    }
+
+    /**
+     * @param array<string, mixed> $config
+     *
+     * @return list<string>
+     */
+    private function formats(array $config): array
+    {
+        $formats = [];
+        foreach ((array) ($config['formats'] ?? []) as $format) {
+            $formats[] = strtolower((string) $format);
+        }
+
+        return $formats;
     }
 
     /**
