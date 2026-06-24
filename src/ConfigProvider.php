@@ -31,6 +31,7 @@ final class ConfigProvider
             'controllers'     => $this->getControllerConfig(),
             'service_manager' => $this->getServiceConfig(),
             'view_helpers'    => $this->getViewHelperConfig(),
+            'laminas-cli'     => $this->getCliConfig(),
         ];
     }
 
@@ -108,6 +109,22 @@ final class ConfigProvider
                 Service\VariantGenerator::class       => Service\Factory\VariantGeneratorFactory::class,
                 Service\OnDemandVariantResolver::class => Service\Factory\OnDemandVariantResolverFactory::class,
                 ImageResizer::class                   => Service\Factory\ImageResizerFactory::class,
+                Command\VariantsCommand::class        => Command\VariantsCommandFactory::class,
+            ],
+        ];
+    }
+
+    /**
+     * laminas-cli command registration. Available on any consuming site as
+     * `vendor/bin/laminas storage:variants`.
+     *
+     * @return array<string, mixed>
+     */
+    public function getCliConfig(): array
+    {
+        return [
+            'commands' => [
+                'storage:variants' => Command\VariantsCommand::class,
             ],
         ];
     }
