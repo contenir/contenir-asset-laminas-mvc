@@ -30,6 +30,8 @@ final class StorageSrcSet extends AbstractHelper
             return '';
         }
 
+        $this->profiles->assertVariantAllowed($path, $profile);
+
         $definition = $this->profiles->get($profile);
         if ($definition === null) {
             return '';

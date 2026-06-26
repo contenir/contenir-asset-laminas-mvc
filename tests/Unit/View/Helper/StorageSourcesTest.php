@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Tests\Unit\View\Helper;
 
+use Contenir\Asset\Laminas\Mvc\Exception\DisallowedVariantException;
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\View\Helper\StorageSources;
+use Contenir\Storage\Config\PathVariantResolver;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
@@ -26,7 +28,7 @@ final class StorageSourcesTest extends TestCase
                     'tile-320' => ['width' => 320, 'height' => 240, 'fit' => 'cover'],
                 ],
             ],
-        ]);
+        ], new PathVariantResolver([]));
 
         return new StorageSources($profiles, new AssetUrlBuilder(''));
     }
@@ -64,5 +66,17 @@ final class StorageSourcesTest extends TestCase
             $html,
         );
         self::assertStringNotContainsString(' srcset="', $html, 'Lazy mode must not emit a live srcset attribute.');
+    }
+
+    public function testThrowsWhenPathDoesNotOwnVariant(): void
+    {
+        $profiles = new ProfileProviderService(
+            ['tile' => ['formats' => ['avif'], 'variants' => ['tile-320' => ['width' => 320, 'height' => 240]]]],
+            new PathVariantResolver(['/asset/library/news/lg' => ['gallery']]),
+        );
+        $helper = new StorageSources($profiles, new AssetUrlBuilder(''));
+
+        $this->expectException(DisallowedVariantException::class);
+        $helper('/asset/library/news/lg/photo.jpg', 'tile');
     }
 }

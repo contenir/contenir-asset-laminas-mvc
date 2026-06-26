@@ -4,8 +4,10 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Tests\Unit\Service;
 
+use Contenir\Asset\Laminas\Mvc\Exception\DisallowedVariantException;
 use Contenir\Asset\Laminas\Mvc\Profile\Profile;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
+use Contenir\Storage\Config\PathVariantResolver;
 use Contenir\Storage\Variant;
 use Contenir\Storage\VariantFit;
 use PHPUnit\Framework\Attributes\Group;
@@ -34,7 +36,7 @@ final class ProfileProviderServiceTest extends TestCase
                 ],
             ],
             'bogus'   => 'not-an-array',
-        ]);
+        ], new PathVariantResolver([]));
     }
 
     public function testHasReportsKnownProfiles(): void
@@ -126,7 +128,7 @@ final class ProfileProviderServiceTest extends TestCase
                 'sizes'      => '(min-width: 1024px) 33vw, 100vw',
                 'dimensions' => ['320x320', '480x480', '768x768'],
             ],
-        ]);
+        ], new PathVariantResolver([]));
 
         $profile = $provider->get('card');
         self::assertInstanceOf(Profile::class, $profile);
@@ -148,7 +150,7 @@ final class ProfileProviderServiceTest extends TestCase
     {
         $provider = new ProfileProviderService([
             'admin-thumb' => ['width' => 180, 'height' => 180, 'fit' => 'contain'],
-        ]);
+        ], new PathVariantResolver([]));
 
         self::assertFalse($provider->has('admin-thumb'));
         $variant = $provider->variant('admin-thumb');
@@ -164,9 +166,33 @@ final class ProfileProviderServiceTest extends TestCase
                 'fit'        => 'contain',
                 'dimensions' => ['180x180'],
             ],
-        ]);
+        ], new PathVariantResolver([]));
 
         self::assertFalse($provider->has('thumb'));
         self::assertNotNull($provider->variant('thumb-180'));
+    }
+
+    public function testAssertVariantAllowedEnforcesPathOwnership(): void
+    {
+        $provider = new ProfileProviderService([], new PathVariantResolver([
+            '*'                      => ['admin-thumb'],
+            '/asset/library/news/lg' => ['gallery'],
+        ]));
+
+        $provider->assertVariantAllowed('/asset/library/news/lg/x.jpg', 'gallery');
+        $provider->assertVariantAllowed('/asset/library/news/lg/x.jpg', 'gallery-480');
+        $provider->assertVariantAllowed('/anywhere/x.jpg', 'admin-thumb');
+        $this->addToAssertionCount(3);
+
+        $this->expectException(DisallowedVariantException::class);
+        $provider->assertVariantAllowed('/asset/library/news/lg/x.jpg', 'tile');
+    }
+
+    public function testAssertVariantAllowedIsNoOpWhenUnconfigured(): void
+    {
+        $provider = new ProfileProviderService([], new PathVariantResolver([]));
+
+        $provider->assertVariantAllowed('/anything.jpg', 'whatever');
+        $this->addToAssertionCount(1);
     }
 }

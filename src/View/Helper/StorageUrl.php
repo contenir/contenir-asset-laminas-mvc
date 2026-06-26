@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc\View\Helper;
 
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
+use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Laminas\View\Helper\AbstractHelper;
 
 /**
@@ -18,8 +19,10 @@ use Laminas\View\Helper\AbstractHelper;
  */
 final class StorageUrl extends AbstractHelper
 {
-    public function __construct(private AssetUrlBuilder $urls)
-    {
+    public function __construct(
+        private ProfileProviderService $profiles,
+        private AssetUrlBuilder $urls,
+    ) {
     }
 
     public function __invoke(?string $path, ?string $variant = null, ?string $format = null): string
@@ -28,8 +31,12 @@ final class StorageUrl extends AbstractHelper
             return '';
         }
 
-        return $variant === null || $variant === ''
-            ? $this->urls->originalUrl($path)
-            : $this->urls->variantUrl($path, $variant, $format);
+        if ($variant === null || $variant === '') {
+            return $this->urls->originalUrl($path);
+        }
+
+        $this->profiles->assertVariantAllowed($path, $variant);
+
+        return $this->urls->variantUrl($path, $variant, $format);
     }
 }
