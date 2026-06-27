@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Service\Factory;
 
+use Contenir\Storage\Config\StorageConfig;
 use Contenir\Storage\Image\ImageResizer;
 use Psr\Container\ContainerInterface;
 
@@ -15,8 +16,8 @@ final class ImageResizerFactory
 {
     public function __invoke(ContainerInterface $container): ImageResizer
     {
-        $config = $container->get('config')['storage']['asset'] ?? [];
+        $backend = StorageConfig::primaryBackendConfig($container->get('config')['storage'] ?? null);
 
-        return new ImageResizer($config['binary'] ?? null);
+        return new ImageResizer($backend['binary'] ?? null);
     }
 }
