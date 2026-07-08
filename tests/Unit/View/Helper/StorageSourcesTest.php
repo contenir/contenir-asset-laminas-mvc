@@ -4,11 +4,9 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Tests\Unit\View\Helper;
 
-use Contenir\Asset\Laminas\Mvc\Exception\DisallowedVariantException;
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\View\Helper\StorageSources;
-use Contenir\Storage\Config\PathVariantResolver;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
@@ -28,7 +26,7 @@ final class StorageSourcesTest extends TestCase
                     'tile-320' => ['width' => 320, 'height' => 240, 'fit' => 'cover'],
                 ],
             ],
-        ], new PathVariantResolver([]));
+        ]);
 
         return new StorageSources($profiles, new AssetUrlBuilder(''));
     }
@@ -68,15 +66,24 @@ final class StorageSourcesTest extends TestCase
         self::assertStringNotContainsString(' srcset="', $html, 'Lazy mode must not emit a live srcset attribute.');
     }
 
-    public function testThrowsWhenPathDoesNotOwnVariant(): void
+    public function testWarnsAndReturnsEmptyOnUnknownProfile(): void
     {
-        $profiles = new ProfileProviderService(
-            ['tile' => ['formats' => ['avif'], 'variants' => ['tile-320' => ['width' => 320, 'height' => 240]]]],
-            new PathVariantResolver(['/asset/library/news/lg' => ['gallery']]),
-        );
-        $helper = new StorageSources($profiles, new AssetUrlBuilder(''));
+        $helper = new StorageSources(new ProfileProviderService([]), new AssetUrlBuilder(''));
 
-        $this->expectException(DisallowedVariantException::class);
-        $helper('/asset/library/news/lg/photo.jpg', 'tile');
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            $warnings[] = $errstr;
+            return true;
+        }, E_USER_WARNING);
+
+        try {
+            $result = $helper('/a/photo.jpg', 'nope');
+        } finally {
+            restore_error_handler();
+        }
+
+        self::assertSame('', $result);
+        self::assertCount(1, $warnings);
+        self::assertStringContainsString('unknown image profile "nope"', $warnings[0]);
     }
 }

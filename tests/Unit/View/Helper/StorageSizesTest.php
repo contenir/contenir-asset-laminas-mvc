@@ -6,7 +6,6 @@ namespace Contenir\Asset\Laminas\Mvc\Tests\Unit\View\Helper;
 
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\View\Helper\StorageSizes;
-use Contenir\Storage\Config\PathVariantResolver;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
@@ -17,7 +16,7 @@ final class StorageSizesTest extends TestCase
     {
         return new StorageSizes(new ProfileProviderService([
             'tile' => ['sizes' => '(min-width: 768px) 33vw, 100vw', 'variants' => []],
-        ], new PathVariantResolver([])));
+        ]));
     }
 
     public function testReturnsConfiguredSizes(): void

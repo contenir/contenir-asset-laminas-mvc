@@ -8,6 +8,10 @@ use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Laminas\View\Helper\AbstractHelper;
 
+use function sprintf;
+use function trigger_error;
+use const E_USER_WARNING;
+
 /**
  * Render a single asset URL — the original, or a specific named variant
  * (optionally in a given format):
@@ -35,7 +39,9 @@ final class StorageUrl extends AbstractHelper
             return $this->urls->originalUrl($path);
         }
 
-        $this->profiles->assertVariantAllowed($path, $variant);
+        if ($this->profiles->variant($variant) === null) {
+            trigger_error(sprintf('StorageUrl: unknown variant "%s".', $variant), E_USER_WARNING);
+        }
 
         return $this->urls->variantUrl($path, $variant, $format);
     }

@@ -9,6 +9,8 @@ use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Laminas\View\Helper\AbstractHelper;
 
 use function sprintf;
+use function trigger_error;
+use const E_USER_WARNING;
 
 /**
  * Render `<source>` elements for a `<picture>`, one per extra output format
@@ -42,10 +44,12 @@ final class StorageSources extends AbstractHelper
             return '';
         }
 
-        $this->profiles->assertVariantAllowed($path, $profile);
-
         $definition = $this->profiles->get($profile);
-        if ($definition === null || $definition->variants === []) {
+        if ($definition === null) {
+            trigger_error(sprintf('StorageSources: unknown image profile "%s".', $profile), E_USER_WARNING);
+            return '';
+        }
+        if ($definition->variants === []) {
             return '';
         }
 

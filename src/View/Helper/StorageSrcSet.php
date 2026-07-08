@@ -8,6 +8,10 @@ use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Laminas\View\Helper\AbstractHelper;
 
+use function sprintf;
+use function trigger_error;
+use const E_USER_WARNING;
+
 /**
  * Render a responsive srcset for a stored asset over a named profile's variant
  * ladder, in the source image format:
@@ -30,10 +34,9 @@ final class StorageSrcSet extends AbstractHelper
             return '';
         }
 
-        $this->profiles->assertVariantAllowed($path, $profile);
-
         $definition = $this->profiles->get($profile);
         if ($definition === null) {
+            trigger_error(sprintf('StorageSrcSet: unknown image profile "%s".', $profile), E_USER_WARNING);
             return '';
         }
 

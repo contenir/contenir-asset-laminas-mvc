@@ -4,9 +4,7 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Service;
 
-use Contenir\Asset\Laminas\Mvc\Exception\DisallowedVariantException;
 use Contenir\Asset\Laminas\Mvc\Profile\Profile;
-use Contenir\Storage\Config\PathVariantResolver;
 use Contenir\Storage\Config\VariantProfile;
 use Contenir\Storage\Variant;
 use Contenir\Storage\VariantFit;
@@ -43,7 +41,7 @@ final class ProfileProviderService
     /**
      * @param array<string, mixed> $profiles Art-directed variant declarations.
      */
-    public function __construct(array $profiles, private readonly PathVariantResolver $resolver)
+    public function __construct(array $profiles)
     {
         foreach ($profiles as $key => $config) {
             if (! is_array($config)) {
@@ -81,24 +79,6 @@ final class ProfileProviderService
     public function variant(string $name): ?Variant
     {
         return $this->variants[$name] ?? null;
-    }
-
-    /**
-     * Guard a render-time request: the asset's path must own the variant's
-     * family (per `storage.paths`). Throws so the error handler surfaces a
-     * template/config mismatch rather than silently rendering a missing variant.
-     *
-     * No-op when `storage.paths` is unconfigured (nothing to enforce) — so a
-     * site that hasn't declared a paths map keeps rendering; enforcement begins
-     * once the map exists.
-     *
-     * @throws DisallowedVariantException If $path does not own $variant's family.
-     */
-    public function assertVariantAllowed(string $path, string $variant): void
-    {
-        if ($this->resolver->isConfigured() && ! $this->resolver->allows($path, $variant)) {
-            throw DisallowedVariantException::for($path, $variant);
-        }
     }
 
     /**

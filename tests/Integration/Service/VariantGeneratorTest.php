@@ -6,7 +6,6 @@ namespace Contenir\Asset\Laminas\Mvc\Tests\Integration\Service;
 
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\Service\VariantGenerator;
-use Contenir\Storage\Config\PathVariantResolver;
 use Contenir\Storage\Image\ImageResizer;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
@@ -46,7 +45,7 @@ final class VariantGeneratorTest extends TestCase
     {
         $profiles = new ProfileProviderService([
             'thumb' => ['variants' => ['t-80' => ['width' => 80, 'height' => 0, 'fit' => 'contain']]],
-        ], new PathVariantResolver([]));
+        ]);
 
         return new VariantGenerator(new ImageResizer(), $profiles, $this->root);
     }

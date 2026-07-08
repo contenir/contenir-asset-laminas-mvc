@@ -4,21 +4,21 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Tests\Unit\View\Helper;
 
-use Contenir\Asset\Laminas\Mvc\Exception\DisallowedVariantException;
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\View\Helper\StorageUrl;
-use Contenir\Storage\Config\PathVariantResolver;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
 #[Group('unit')]
 final class StorageUrlTest extends TestCase
 {
-    private function helper(?PathVariantResolver $resolver = null): StorageUrl
+    private function helper(): StorageUrl
     {
         return new StorageUrl(
-            new ProfileProviderService([], $resolver ?? new PathVariantResolver([])),
+            new ProfileProviderService([
+                'tile' => ['variants' => ['tile-640' => ['width' => 640, 'height' => 480, 'fit' => 'cover']]],
+            ]),
             new AssetUrlBuilder(''),
         );
     }
@@ -43,19 +43,22 @@ final class StorageUrlTest extends TestCase
         self::assertSame('/a/_variant/tile-640/photo.webp', ($this->helper())('/a/photo.jpg', 'tile-640', 'webp'));
     }
 
-    public function testThrowsWhenPathDoesNotOwnVariant(): void
+    public function testWarnsOnUnknownVariantButStillEmitsUrl(): void
     {
-        $helper = $this->helper(new PathVariantResolver(['/asset/library/news/lg' => ['gallery']]));
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            $warnings[] = $errstr;
+            return true;
+        }, E_USER_WARNING);
 
-        $this->expectException(DisallowedVariantException::class);
-        $helper('/asset/library/news/lg/photo.jpg', 'tile-640');
-    }
+        try {
+            $url = ($this->helper())('/a/photo.jpg', 'nope-999');
+        } finally {
+            restore_error_handler();
+        }
 
-    public function testOriginalUrlIsNotGuarded(): void
-    {
-        $helper = $this->helper(new PathVariantResolver(['/asset/library/news/lg' => ['gallery']]));
-
-        // No variant requested → original, no ownership check.
-        self::assertSame('/asset/library/news/lg/photo.jpg', $helper('/asset/library/news/lg/photo.jpg'));
+        self::assertSame('/a/_variant/nope-999/photo.jpg', $url, 'URL construction stays deterministic.');
+        self::assertCount(1, $warnings);
+        self::assertStringContainsString('unknown variant "nope-999"', $warnings[0]);
     }
 }
