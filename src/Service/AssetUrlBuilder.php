@@ -32,9 +32,12 @@ use function substr;
  *   bucket's public CDN base (admin4's sibling-key convention), generated at
  *   upload, by backfill, or on demand at the edge.
  *
- * Returns RAW strings for the local scheme (clean asset paths) and percent-encoded
- * segments for the sibling scheme (CMS filenames may contain spaces that would
- * otherwise break the srcset tokeniser). Escaping remains the output context's job.
+ * Path segments are percent-encoded under both schemes. CMS filenames routinely
+ * carry spaces and parentheses, and an unencoded space breaks the srcset
+ * tokeniser outright -- it reads the text after the space as the candidate's
+ * descriptor and discards the whole attribute. The local variant route decodes
+ * on the way back in (AssetVariantController urldecode()s folder and filename),
+ * so encoding is safe for both. Escaping remains the output context's job.
  */
 final class AssetUrlBuilder
 {
@@ -55,7 +58,7 @@ final class AssetUrlBuilder
     {
         $key = $this->key($path);
 
-        return $this->siblingScheme ? $this->absoluteEncoded($key) : $this->absolute($key);
+        return $this->absoluteEncoded($key);
     }
 
     public function variantUrl(string $path, string $name, ?string $format = null): string
@@ -77,7 +80,7 @@ final class AssetUrlBuilder
             ? sprintf('%s/%s/%s', self::VARIANT_DIR, $name, $file)
             : sprintf('%s/%s/%s/%s', $dir, self::VARIANT_DIR, $name, $file);
 
-        return $this->absolute($variantKey);
+        return $this->absoluteEncoded($variantKey);
     }
 
     /**
@@ -136,11 +139,6 @@ final class AssetUrlBuilder
         $dir = dirname($path);
 
         return ($dir === '.' || $dir === '/' || $dir === '') ? '' : $dir;
-    }
-
-    private function absolute(string $key): string
-    {
-        return $this->publicBase . '/' . ltrim($key, '/');
     }
 
     private function absoluteEncoded(string $key): string

@@ -139,4 +139,38 @@ final class AssetUrlBuilderTest extends TestCase
             $builder->variantUrl('a/my photo.jpg', 'card'),
         );
     }
+
+    public function testLocalOriginalUrlPercentEncodesPathSegments(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        self::assertSame('/a/my%20photo%20%281%29.jpg', $builder->originalUrl('/a/my photo (1).jpg'));
+    }
+
+    public function testLocalVariantUrlPercentEncodesPathSegments(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        self::assertSame(
+            '/a/_variant/card-320/my%20photo%20%281%29.jpg',
+            $builder->variantUrl('/a/my photo (1).jpg', 'card-320'),
+        );
+    }
+
+    public function testLocalSrcsetStaysParseableWhenFilenamesContainSpaces(): void
+    {
+        // An unencoded space ends the candidate URL as far as the srcset
+        // tokeniser is concerned, and the browser drops the whole attribute --
+        // so every candidate has to survive as a single token.
+        $builder  = new AssetUrlBuilder('');
+        $variants = [
+            new Variant('card-320', 320, 160, VariantFit::Cover),
+            new Variant('card-640', 640, 320, VariantFit::Cover),
+        ];
+
+        self::assertSame(
+            '/a/_variant/card-320/my%20photo.jpg 320w, /a/_variant/card-640/my%20photo.jpg 640w',
+            $builder->srcset('/a/my photo.jpg', $variants),
+        );
+    }
 }
