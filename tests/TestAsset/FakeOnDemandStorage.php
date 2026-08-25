@@ -6,7 +6,9 @@ namespace Contenir\Asset\Laminas\Mvc\Tests\TestAsset;
 
 use Contenir\Storage\Entry;
 use Contenir\Storage\ImageMeta;
+use Contenir\Storage\Exception\NotFoundException;
 use Contenir\Storage\ListOptions;
+use Contenir\Storage\MissingVariantsReporterInterface;
 use Contenir\Storage\OnDemandVariantGeneratorInterface;
 use Contenir\Storage\StorageInterface;
 use Contenir\Storage\UploadInput;
@@ -14,13 +16,21 @@ use DateTimeImmutable;
 use LogicException;
 
 use function basename;
+use function in_array;
 
 /**
  * In-memory storage double exercising only what {@see \Contenir\Asset\Laminas\Mvc\Command\VariantsCommand}
- * touches: a flat list() of originals, exists(), and on-demand generateForKey().
+ * touches: a flat list() of originals, plus the missing/regenerate pair.
+ *
+ * Which variants an original is entitled to is the backend's business, so the
+ * double is told directly rather than deriving it — the command under test is
+ * responsible only for walking originals and tallying what it is handed.
  * The remaining StorageInterface methods are not exercised and throw.
  */
-final class FakeOnDemandStorage implements StorageInterface, OnDemandVariantGeneratorInterface
+final class FakeOnDemandStorage implements
+    StorageInterface,
+    MissingVariantsReporterInterface,
+    OnDemandVariantGeneratorInterface
 {
     /** @var array<string, true> */
     private array $existing = [];
@@ -29,14 +39,39 @@ final class FakeOnDemandStorage implements StorageInterface, OnDemandVariantGene
     public array $generated = [];
 
     /**
-     * @param list<string> $originals        Original image keys to enumerate.
-     * @param list<string> $existingVariants  Variant keys that already exist.
+     * @param list<string>                $originals Original image keys to enumerate.
+     * @param array<string, list<string>> $outstanding Original key => variant keys it still lacks.
+     * @param list<string>                $unreadable Original keys that raise NotFoundException.
      */
-    public function __construct(private array $originals, array $existingVariants = [])
-    {
-        foreach ([...$originals, ...$existingVariants] as $key) {
+    public function __construct(
+        private array $originals,
+        private array $outstanding = [],
+        private array $unreadable = [],
+    ) {
+        foreach ($originals as $key) {
             $this->existing[$key] = true;
         }
+    }
+
+    public function missingVariants(string $path): array
+    {
+        if (in_array($path, $this->unreadable, true)) {
+            throw NotFoundException::forPath($path);
+        }
+
+        return $this->outstanding[$path] ?? [];
+    }
+
+    public function regenerateMissingVariants(string $path): array
+    {
+        $keys = $this->missingVariants($path);
+        foreach ($keys as $key) {
+            $this->generated[]           = $key;
+            $this->existing[$key]        = true;
+        }
+        $this->outstanding[$path] = [];
+
+        return $keys;
     }
 
     public function list(string $path, ?ListOptions $options = null): iterable
@@ -100,12 +135,6 @@ final class FakeOnDemandStorage implements StorageInterface, OnDemandVariantGene
     }
 
     public function thumbnailUrl(string $path): ?string
-    {
-        throw new LogicException('not exercised');
-    }
-
-    /** @return list<string> */
-    public function regenerateMissingVariants(string $path): array
     {
         throw new LogicException('not exercised');
     }

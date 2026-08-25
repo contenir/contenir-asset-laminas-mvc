@@ -11,9 +11,8 @@ final class VariantsCommandFactory
 {
     public function __invoke(ContainerInterface $container): VariantsCommand
     {
-        /** @var array<string, mixed> $config */
-        $config = $container->get('config');
-
-        return new VariantsCommand($container->get(StorageManager::class), $config);
+        // What each path is entitled to is resolved inside the backend, from
+        // storage.variants and storage.paths — the command needs no config.
+        return new VariantsCommand($container->get(StorageManager::class));
     }
 }

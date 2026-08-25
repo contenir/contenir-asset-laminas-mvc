@@ -14,113 +14,105 @@ use Symfony\Component\Console\Tester\CommandTester;
 #[Group('unit')]
 final class VariantsCommandTest extends TestCase
 {
-    private function tester(FakeOnDemandStorage $storage): CommandTester
+    private function tester(FakeOnDemandStorage $storage, string $name = 'r2'): CommandTester
     {
         $manager = new StorageManager();
-        $manager->register('assets', $storage);
+        $manager->register($name, $storage, isPrimary: true);
 
-        // Mirrors a real site: the storage (generation) profile + its variant
-        // registry live under storage.profiles.<name>, NOT settings.storage.profiles
-        // (which holds the front-end art-directed profiles).
-        $config = [
-            'storage' => [
-                'profiles' => [
-                    'assets' => [
-                        'variants' => [
-                            'hero-480' => ['width' => 480],
-                            'card-320' => ['width' => 320],
-                        ],
-                    ],
-                ],
-            ],
-        ];
-
-        return new CommandTester(new VariantsCommand($manager, $config));
+        return new CommandTester(new VariantsCommand($manager));
     }
 
-    public function testReportsMissingWithoutGenerating(): void
+    public function testReportsOutstandingVariantsWithoutGenerating(): void
     {
-        $storage = new FakeOnDemandStorage(['gallery/cat.jpg']);
-        $tester  = $this->tester($storage);
+        $storage = new FakeOnDemandStorage(
+            ['gallery/cat.jpg'],
+            ['gallery/cat.jpg' => ['gallery/cat__hero-480.jpg', 'gallery/cat__hero-480.avif']],
+        );
+        $tester = $this->tester($storage);
 
-        $tester->execute(['--profile' => 'assets']);
+        $tester->execute([]);
 
-        // 2 variants × {jpg source, avif, webp} = 6 missing; nothing generated.
         self::assertSame([], $storage->generated);
         self::assertSame(0, $tester->getStatusCode());
         self::assertStringContainsString('Re-run with --generate', $tester->getDisplay());
     }
 
-    public function testGeneratesSourcePlusModernForEveryVariant(): void
+    public function testGeneratesEveryOutstandingVariantWhenAsked(): void
     {
-        $storage = new FakeOnDemandStorage(['gallery/cat.jpg']);
-        $tester  = $this->tester($storage);
+        $storage = new FakeOnDemandStorage(
+            ['gallery/cat.jpg'],
+            ['gallery/cat.jpg' => ['gallery/cat__hero-480.jpg', 'gallery/cat__hero-480.avif']],
+        );
+        $tester = $this->tester($storage);
 
-        $tester->execute(['--profile' => 'assets', '--generate' => true]);
+        $tester->execute(['--generate' => true]);
 
-        self::assertCount(6, $storage->generated);
-        self::assertContains('gallery/cat__hero-480.jpg', $storage->generated, 'source <img> fallback');
-        self::assertContains('gallery/cat__hero-480.avif', $storage->generated);
-        self::assertContains('gallery/cat__hero-480.webp', $storage->generated);
-        self::assertContains('gallery/cat__card-320.avif', $storage->generated);
-    }
-
-    public function testVariantAndFormatScoping(): void
-    {
-        $storage = new FakeOnDemandStorage(['gallery/cat.jpg']);
-        $tester  = $this->tester($storage);
-
-        $tester->execute([
-            '--profile'  => 'assets',
-            '--variant'  => 'hero-480',
-            '--format'   => 'avif',
-            '--generate' => true,
-        ]);
-
-        // hero-480 only; formats = source(jpg) + avif.
         self::assertSame(
             ['gallery/cat__hero-480.jpg', 'gallery/cat__hero-480.avif'],
             $storage->generated,
         );
     }
 
-    public function testSkipsVariantsThatAlreadyExist(): void
+    public function testGeneratesNothingForAnAlreadyCompleteOriginal(): void
+    {
+        $storage = new FakeOnDemandStorage(['gallery/cat.jpg']);
+        $tester  = $this->tester($storage);
+
+        $tester->execute(['--generate' => true]);
+
+        self::assertSame([], $storage->generated);
+        self::assertStringNotContainsString('Re-run with --generate', $tester->getDisplay());
+    }
+
+    public function testDefaultsToThePrimaryBackendWhenNoneIsNamed(): void
+    {
+        // The old default named a backend ('assets') that the flat schema no
+        // longer produces, so every run failed on an unknown backend.
+        $storage = new FakeOnDemandStorage(['gallery/cat.jpg']);
+        $tester  = $this->tester($storage, 'r2');
+
+        $tester->execute([]);
+
+        self::assertSame(0, $tester->getStatusCode());
+        self::assertStringContainsString('backend=r2', $tester->getDisplay());
+    }
+
+    public function testFailsWhenTheNamedBackendIsUnknown(): void
+    {
+        $tester = $this->tester(new FakeOnDemandStorage([]));
+
+        $tester->execute(['--backend' => 'nope']);
+
+        self::assertSame(1, $tester->getStatusCode());
+        self::assertStringContainsString('Unknown backend "nope"', $tester->getDisplay());
+    }
+
+    public function testStopsAfterTheOriginalLimit(): void
     {
         $storage = new FakeOnDemandStorage(
-            ['gallery/cat.jpg'],
-            ['gallery/cat__hero-480.avif'],
+            ['a.jpg', 'b.jpg', 'c.jpg'],
+            [
+                'a.jpg' => ['a__hero-480.jpg'],
+                'b.jpg' => ['b__hero-480.jpg'],
+                'c.jpg' => ['c__hero-480.jpg'],
+            ],
         );
         $tester = $this->tester($storage);
 
-        $tester->execute([
-            '--profile'  => 'assets',
-            '--variant'  => 'hero-480',
-            '--format'   => 'avif',
-            '--generate' => true,
-        ]);
+        $tester->execute(['--generate' => true, '--limit' => '2']);
 
-        // avif already present → only the source jpg is generated.
-        self::assertSame(['gallery/cat__hero-480.jpg'], $storage->generated);
+        self::assertSame(['a__hero-480.jpg', 'b__hero-480.jpg'], $storage->generated);
     }
 
-    public function testExpandsDimensionFamilyToRungVariants(): void
+    public function testAnOriginalDeletedMidRunIsNotAFailure(): void
     {
-        $storage = new FakeOnDemandStorage(['gallery/cat.jpg']);
-        $manager = new StorageManager();
-        $manager->register('assets', $storage);
-        $config = [
-            'storage' => ['profiles' => ['assets' => ['variants' => [
-                'card' => ['fit' => 'cover', 'dimensions' => ['320x320', '480x480']],
-            ]]]],
-        ];
-        $tester = new CommandTester(new VariantsCommand($manager, $config));
+        // list() and the per-original call are not atomic, so a concurrent
+        // delete must not fail the whole run.
+        $storage = new FakeOnDemandStorage(['gone.jpg'], [], ['gone.jpg']);
+        $tester  = $this->tester($storage);
 
-        $tester->execute(['--profile' => 'assets', '--format' => 'avif', '--generate' => true]);
+        $tester->execute(['--generate' => true]);
 
-        // The family expands to card-320 + card-480, each as {jpg source, avif}.
-        self::assertContains('gallery/cat__card-320.avif', $storage->generated);
-        self::assertContains('gallery/cat__card-480.avif', $storage->generated);
-        self::assertContains('gallery/cat__card-320.jpg', $storage->generated);
-        self::assertCount(4, $storage->generated);
+        self::assertSame(0, $tester->getStatusCode());
     }
 }
