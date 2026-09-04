@@ -16,10 +16,11 @@ final class AssetUrlBuilderFactory
         $type    = (string) ($backend['type'] ?? AssetUrlBuilder::BACKEND_LOCAL);
 
         // Local serves variants under the web root (public_path); object stores
-        // serve sibling objects from the bucket's public CDN base (public_base_url).
+        // serve sibling objects from the bucket's public CDN base. `publicUrl` is
+        // the storage layer's canonical key; `public_base_url` is kept as an alias.
         $publicBase = $type === AssetUrlBuilder::BACKEND_LOCAL
             ? (string) ($backend['public_path'] ?? '')
-            : (string) ($backend['public_base_url'] ?? '');
+            : (string) ($backend['public_base_url'] ?? $backend['publicUrl'] ?? '');
 
         return new AssetUrlBuilder($publicBase, $type);
     }
