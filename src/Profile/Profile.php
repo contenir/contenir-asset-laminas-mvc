@@ -11,17 +11,17 @@ use Contenir\Storage\Variant;
  * front-end needs it: the HTML `sizes` attribute, the extra `<picture>` output
  * formats, and the responsive variants (the CMS preview variant excluded).
  */
-final readonly class Profile
+final class Profile
 {
     /**
      * @param list<string>  $formats  Extra output formats, e.g. ['avif', 'webp'].
      * @param list<Variant> $variants Responsive variants, preview excluded.
      */
     public function __construct(
-        public string $key,
-        public string $sizes,
-        public array $formats,
-        public array $variants,
+        public readonly string $key,
+        public readonly string $sizes,
+        public readonly array $formats,
+        public readonly array $variants,
     ) {
     }
 }
