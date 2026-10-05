@@ -13,7 +13,10 @@ Contenir 2.x packages. See [UPGRADE-2.0.md](UPGRADE-2.0.md).
 ### Changed
 
 - Requires PHP 8.3, 8.4 or 8.5, and accepts `contenir/storage` ^0.6.1 or ^2.0.
-- Requires `psr/container` ^1.1 or ^2.0 (1.0 had no parameter types).
+- Requires `psr/container` ^1.1 or ^2.0 (1.0 had no parameter types),
+  `laminas/laminas-mvc` ^3.8 and `symfony/console` ^6.4.10 or ^7.1.3, the
+  first releases free of PHP 8.4 implicit-nullable deprecations. The command
+  extends Symfony's `Command`, so `symfony/console` is now declared directly.
 - Class constants are typed (`AssetUrlBuilder::BACKEND_LOCAL`,
   `ProfileProviderService::PREVIEW_VARIANT`).
 - `AssetVariantController::indexAction()` returns a `Response` carrying the

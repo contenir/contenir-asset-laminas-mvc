@@ -22,7 +22,7 @@ CMS and `contenir/storage` read, so there is one source of truth.
 
 - PHP 8.3, 8.4 or 8.5
 - `contenir/storage` 0.6.1+ or 2.x
-- laminas-mvc 3, laminas-view 2, laminas-router 3, laminas-http 2, laminas-cli 1.8+
+- laminas-mvc 3.8+, laminas-view 2, symfony/console 6.4.10+ or 7.1.3+, laminas-router 3, laminas-http 2, laminas-cli 1.8+
 - ImageMagick (imagick extension or `magick`/`convert` CLI) for local generation
 
 ## Installation

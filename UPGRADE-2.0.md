@@ -8,6 +8,8 @@ are tightened.
 | PHP | ^8.1 | 8.3, 8.4 or 8.5 |
 | contenir/storage | ^0.6.1 | ^0.6.1 or ^2.0 |
 | psr/container | ^1.0 \|\| ^2.0 | ^1.1 \|\| ^2.0 |
+| laminas/laminas-mvc | ^3.0 | ^3.8 (first release clean under PHP 8.4) |
+| symfony/console | via laminas-cli | ^6.4.10 \|\| ^7.1.3, declared directly (used by `VariantsCommand`) |
 
 ```bash
 composer require contenir/contenir-asset-laminas-mvc:^2.0
