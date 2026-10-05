@@ -4,7 +4,31 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [2.0.0] - Unreleased
+## [2.1.0] - Unreleased
+
+### Changed
+
+- Requires `contenir/storage` ^2.0. Storage 0.6 is no longer accepted; stay on
+  2.0.x of this package if you need it.
+- `Service\VariantGenerator` takes any `Contenir\Storage\Image\ImageResizerInterface`
+  instead of the concrete `ImageResizer`, which storage 2.0 made `final`. Sites
+  can supply their own resizer by registering a service under
+  `ImageResizerInterface::class`; it defaults to an alias of the shipped
+  `ImageResizer`.
+
+### Fixed
+
+- With storage 2.0 installed, nothing but the shipped `ImageResizer` could be
+  passed to `VariantGenerator`, so storage's own `StubImageResizer` and any
+  custom resizer were rejected with a `TypeError`.
+
+### Documented
+
+- `storage:variants` lets storage 2.0's `InvalidPathException` propagate for an
+  unsafe `--prefix` (traversal or null byte), in the same way as the existing
+  `NotFoundException` for a missing one.
+
+## [2.0.0] - 2026-10-05
 
 The public API is unchanged apart from the typing noted below. The major
 version marks the move to PHP 8.3+ and the php-db QA toolchain shared by all

@@ -4,7 +4,7 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Service;
 
-use Contenir\Storage\Image\ImageResizer;
+use Contenir\Storage\Image\ImageResizerInterface;
 use Contenir\Storage\Variant;
 use Throwable;
 
@@ -25,7 +25,7 @@ use const PATHINFO_FILENAME;
 
 /**
  * Resolves a requested keyed variant to a concrete file, generating it on demand
- * via {@see ImageResizer} when missing.
+ * via an {@see ImageResizerInterface} when missing.
  *
  * The variant definition (width, height, fit, quality) is looked up from
  * {@see ProfileProviderService} by the variant name carried in the URL; the
@@ -42,7 +42,7 @@ final class VariantGenerator
     private string $assetRoot;
 
     public function __construct(
-        private ImageResizer $resizer,
+        private ImageResizerInterface $resizer,
         private ProfileProviderService $profiles,
         string $rootPath,
     ) {

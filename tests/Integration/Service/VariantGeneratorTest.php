@@ -9,6 +9,7 @@ use Contenir\Asset\Laminas\Mvc\Service\VariantGenerator;
 use Contenir\Asset\Laminas\Mvc\Tests\Trait\TemporaryDirectoryTrait;
 use Contenir\Storage\Exception\WriteException;
 use Contenir\Storage\Image\ImageResizer;
+use Contenir\Storage\Image\ImageResizerInterface;
 use Contenir\Storage\Image\StubImageResizer;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
@@ -148,7 +149,7 @@ final class VariantGeneratorTest extends TestCase
         parent::tearDown();
     }
 
-    private function generator(ImageResizer $resizer): VariantGenerator
+    private function generator(ImageResizerInterface $resizer): VariantGenerator
     {
         $profiles = new ProfileProviderService([
             'thumb' => ['variants' => ['t-80' => ['width' => 80, 'height' => 0, 'fit' => 'contain', 'quality' => 70]]],
@@ -161,9 +162,9 @@ final class VariantGeneratorTest extends TestCase
      * A resizer that writes every destination except those ending in $suffix
      * ('' fails them all).
      */
-    private function resizerFailingFor(string $suffix): ImageResizer
+    private function resizerFailingFor(string $suffix): ImageResizerInterface
     {
-        $resizer = $this->createStub(ImageResizer::class);
+        $resizer = $this->createStub(ImageResizerInterface::class);
         $resizer->method('resize')
             ->willReturnCallback(function (string $source, string $dest) use ($suffix): void {
                 if ('' === $suffix || str_ends_with($dest, $suffix)) {

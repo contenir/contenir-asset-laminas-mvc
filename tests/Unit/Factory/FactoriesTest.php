@@ -29,6 +29,7 @@ use Contenir\Asset\Laminas\Mvc\View\Helper\StorageSources;
 use Contenir\Asset\Laminas\Mvc\View\Helper\StorageSrcSet;
 use Contenir\Asset\Laminas\Mvc\View\Helper\StorageUrl;
 use Contenir\Storage\Image\ImageResizer;
+use Contenir\Storage\Image\ImageResizerInterface;
 use Contenir\Storage\Image\StubImageResizer;
 use Contenir\Storage\StorageManager;
 use PHPUnit\Framework\Attributes\DataProvider;
@@ -100,7 +101,7 @@ final class FactoriesTest extends TestCase
             StorageManager::class          => $manager,
             OnDemandVariantResolver::class => $resolver,
             VariantGenerator::class        => $generator,
-            ImageResizer::class            => new StubImageResizer(),
+            ImageResizerInterface::class   => new StubImageResizer(),
         ]);
 
         static::assertInstanceOf(VariantsCommand::class, (new VariantsCommandFactory())($container));

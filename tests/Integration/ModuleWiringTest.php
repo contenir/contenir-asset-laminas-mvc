@@ -9,6 +9,7 @@ use Contenir\Asset\Laminas\Mvc\Controller\AssetVariantController;
 use Contenir\Asset\Laminas\Mvc\Controller\AssetVariantGenerateController;
 use Contenir\Asset\Laminas\Mvc\Module;
 use Contenir\Storage\Image\ImageResizer;
+use Contenir\Storage\Image\ImageResizerInterface;
 use Contenir\Storage\StorageManager;
 use Laminas\EventManager\EventManager;
 use Laminas\EventManager\SharedEventManager;
@@ -41,6 +42,15 @@ final class ModuleWiringTest extends TestCase
         static::assertInstanceOf(
             AssetVariantGenerateController::class,
             $controllers->get(AssetVariantGenerateController::class),
+        );
+    }
+
+    #[Test]
+    public function resizerInterfaceResolvesToTheSharedResizer(): void
+    {
+        static::assertSame(
+            $this->services->get(ImageResizer::class),
+            $this->services->get(ImageResizerInterface::class),
         );
     }
 
