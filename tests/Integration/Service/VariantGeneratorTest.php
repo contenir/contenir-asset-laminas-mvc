@@ -7,6 +7,8 @@ namespace Contenir\Asset\Laminas\Mvc\Tests\Integration\Service;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\Service\VariantGenerator;
 use Contenir\Storage\Image\ImageResizer;
+use Contenir\Storage\Image\StubImageResizer;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\TestCase;
 
@@ -20,10 +22,12 @@ use function mkdir;
 use function rmdir;
 use function scandir;
 use function shell_exec;
+use function file_put_contents;
 use function sys_get_temp_dir;
 use function trim;
 use function uniqid;
 use function unlink;
+use function urldecode;
 
 #[Group('integration')]
 final class VariantGeneratorTest extends TestCase
@@ -41,13 +45,48 @@ final class VariantGeneratorTest extends TestCase
         $this->removeTree($this->root);
     }
 
-    private function generator(): VariantGenerator
+    private function generator(?ImageResizer $resizer = null): VariantGenerator
     {
         $profiles = new ProfileProviderService([
             'thumb' => ['variants' => ['t-80' => ['width' => 80, 'height' => 0, 'fit' => 'contain']]],
         ]);
 
-        return new VariantGenerator(new ImageResizer(), $profiles, $this->root);
+        return new VariantGenerator($resizer ?? new ImageResizer(), $profiles, $this->root);
+    }
+
+    /**
+     * @return array<string, array{string}>
+     */
+    public static function unsafeFolderProvider(): array
+    {
+        return [
+            'parent segment'         => ['../outside'],
+            'nested parent segment'  => ['foo/../../outside'],
+            'encoded parent segment' => [urldecode('%2e%2e/outside')],
+            'null byte'              => ["foo\0"],
+        ];
+    }
+
+    #[DataProvider('unsafeFolderProvider')]
+    public function testRefusesFolderOutsideAssetDirectory(string $folder): void
+    {
+        mkdir($this->root . '/outside', 0o775, true);
+        file_put_contents($this->root . '/outside/pic.jpg', 'original');
+        $resizer = new StubImageResizer();
+
+        self::assertNull($this->generator($resizer)->generate($folder, 't-80', 'pic.jpg'));
+        self::assertSame([], $resizer->calls);
+    }
+
+    public function testGeneratesVariantForNestedSafeFolder(): void
+    {
+        mkdir($this->root . '/asset/foo/bar', 0o775, true);
+        file_put_contents($this->root . '/asset/foo/bar/pic.jpg', 'original');
+        $resizer = new StubImageResizer();
+
+        $path = $this->generator($resizer)->generate('foo/bar', 't-80', 'pic.jpg');
+
+        self::assertSame($this->root . '/asset/foo/bar/_variant/t-80/pic.jpg', $path);
     }
 
     public function testReturnsNullForUnknownVariant(): void

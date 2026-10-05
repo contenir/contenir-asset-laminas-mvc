@@ -9,10 +9,13 @@ use Contenir\Storage\Variant;
 use Throwable;
 
 use function basename;
+use function explode;
+use function in_array;
 use function is_file;
 use function pathinfo;
 use function rtrim;
 use function sprintf;
+use function str_contains;
 use function strtolower;
 use function strtoupper;
 use function trim;
@@ -51,6 +54,10 @@ final class VariantGenerator
         $folder   = trim($folder, '/');
         $filename = basename($filename);
 
+        if (! self::isSafeFolder($folder)) {
+            return null;
+        }
+
         $variant = $this->profiles->variant($name);
         if ($variant === null) {
             return null;
@@ -78,6 +85,15 @@ final class VariantGenerator
         }
 
         return null;
+    }
+
+    /**
+     * Whether $folder stays inside the asset directory: no `..` segment and no
+     * null byte, which the URL-decoded route parameter could otherwise carry.
+     */
+    private static function isSafeFolder(string $folder): bool
+    {
+        return ! str_contains($folder, "\0") && ! in_array('..', explode('/', $folder), true);
     }
 
     private function materialise(string $source, string $dest, Variant $variant): bool
