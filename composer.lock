@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "73919fb72483074bc022a166125618b9",
+    "content-hash": "2df3c85431b9f7ab969a98da2a9a6c5a",
     "packages": [
         {
             "name": "brick/varexporter",
@@ -57,37 +57,40 @@
         },
         {
             "name": "contenir/storage",
-            "version": "v0.6.6",
+            "version": "v2.0.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/contenir/storage.git",
-                "reference": "037404c3e3dc4613bd0bca2f700b31631ac31ec4"
+                "reference": "a2d8ef013476f7ae3f058b7f23b75a4cf5041f33"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/contenir/storage/zipball/037404c3e3dc4613bd0bca2f700b31631ac31ec4",
-                "reference": "037404c3e3dc4613bd0bca2f700b31631ac31ec4",
+                "url": "https://api.github.com/repos/contenir/storage/zipball/a2d8ef013476f7ae3f058b7f23b75a4cf5041f33",
+                "reference": "a2d8ef013476f7ae3f058b7f23b75a4cf5041f33",
                 "shasum": ""
             },
             "require": {
-                "league/flysystem": "^3.0",
-                "php": "^8.1 || ^8.2 || ^8.3",
+                "league/flysystem": "^3.29",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
                 "psr/log": "^1.1 || ^2.0 || ^3.0"
             },
             "require-dev": {
-                "cloudflare/sdk": "^1.1",
-                "gumlet/php-image-resize": "^2.0",
-                "league/flysystem-aws-s3-v3": "^3.0",
-                "league/flysystem-memory": "^3.0",
-                "phpunit/phpunit": "^11.0",
-                "squizlabs/php_codesniffer": "^3.10"
+                "league/flysystem-aws-s3-v3": "^3.29",
+                "league/flysystem-memory": "^3.29",
+                "league/mime-type-detection": "^1.16",
+                "php-db/phpdb-qa-tools": "0.1.x-dev",
+                "phpunit/phpunit": "^11.5.42"
             },
             "suggest": {
-                "cloudflare/sdk": "Required by the CloudflareImages adapter.",
-                "gumlet/php-image-resize": "Required by ImageResizer for local variant generation.",
-                "league/flysystem-aws-s3-v3": "Required by the S3 adapter."
+                "ext-imagick": "Preferred by ImageResizer for variant generation; the magick/convert CLI is used otherwise.",
+                "league/flysystem-aws-s3-v3": "Required by StorageConfig to build s3 and cloudflare-images backends."
             },
             "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-main": "2.0.x-dev"
+                }
+            },
             "autoload": {
                 "psr-4": {
                     "Contenir\\Storage\\": "src/"
@@ -100,9 +103,9 @@
             "description": "Framework-agnostic asset storage for Contenir CMS — local, S3-compatible, and Cloudflare Images adapters with a shared variant pipeline.",
             "support": {
                 "issues": "https://github.com/contenir/storage/issues",
-                "source": "https://github.com/contenir/storage/tree/v0.6.6"
+                "source": "https://github.com/contenir/storage/tree/v2.0.0"
             },
-            "time": "2026-09-04T10:53:26+00:00"
+            "time": "2026-10-05T09:28:41+00:00"
         },
         {
             "name": "laminas/laminas-cli",
@@ -4361,9 +4364,9 @@
     "platform": {
         "php": "~8.3.0 || ~8.4.0 || ~8.5.0"
     },
-    "platform-dev": {},
+    "platform-dev": [],
     "platform-overrides": {
         "php": "8.3.99"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }

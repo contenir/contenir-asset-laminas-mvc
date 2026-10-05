@@ -7,7 +7,7 @@ namespace Contenir\Asset\Laminas\Mvc\Service\Factory;
 use Contenir\Asset\Laminas\Mvc\Container\Services;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\Service\VariantGenerator;
-use Contenir\Storage\Image\ImageResizer;
+use Contenir\Storage\Image\ImageResizerInterface;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
 use UnexpectedValueException;
@@ -21,7 +21,7 @@ final class VariantGeneratorFactory
     public function __invoke(ContainerInterface $container): VariantGenerator
     {
         return new VariantGenerator(
-            Services::get($container, ImageResizer::class),
+            Services::get($container, ImageResizerInterface::class),
             Services::get($container, ProfileProviderService::class),
             Services::backendOption($container, 'root_path') ?? 'public',
         );

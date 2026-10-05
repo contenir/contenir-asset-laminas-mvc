@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc\Command;
 
 use Contenir\Storage\Entry;
+use Contenir\Storage\Exception\InvalidPathException;
 use Contenir\Storage\Exception\NotFoundException;
 use Contenir\Storage\ListOptions;
 use Contenir\Storage\MissingVariantsReporterInterface;
@@ -93,6 +94,7 @@ final class VariantsCommand extends Command
     /**
      * @throws InvalidArgumentException If no backend is registered.
      * @throws NotFoundException        If the --prefix does not exist.
+     * @throws InvalidPathException     If the --prefix is unsafe (traversal, null byte).
      */
     #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
@@ -173,7 +175,8 @@ final class VariantsCommand extends Command
      *
      * @return iterable<Entry>
      *
-     * @throws NotFoundException If $path does not exist.
+     * @throws NotFoundException    If $path does not exist.
+     * @throws InvalidPathException If $path is unsafe (traversal, null byte).
      */
     private function eachOriginal(StorageInterface $storage, string $path): iterable
     {
@@ -231,7 +234,8 @@ final class VariantsCommand extends Command
      *
      * @return array{originals: int, complete: int, keys: int, errors: int}
      *
-     * @throws NotFoundException If $prefix does not exist.
+     * @throws NotFoundException    If $prefix does not exist.
+     * @throws InvalidPathException If $prefix is unsafe (traversal, null byte).
      */
     private function walk(
         SymfonyStyle $io,

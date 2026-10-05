@@ -5,7 +5,7 @@
     "license": "MIT",
     "require": {
         "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
-        "contenir/storage": "^0.6.1 || ^2.0",
+        "contenir/storage": "^2.0",
         "laminas/laminas-cli": "^1.8",
         "laminas/laminas-http": "^2.0",
         "laminas/laminas-mvc": "^3.8",
@@ -60,7 +60,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-main": "2.0.x-dev"
+            "dev-main": "2.1.x-dev"
         },
         "laminas": {
             "module": "Contenir\\Asset\\Laminas\\Mvc"

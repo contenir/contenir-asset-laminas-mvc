@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc;
 
 use Contenir\Storage\Image\ImageResizer;
+use Contenir\Storage\Image\ImageResizerInterface;
 use Laminas\Router\Http\Literal;
 use Laminas\Router\Http\Regex;
 
@@ -86,6 +87,9 @@ final class ConfigProvider
     public function getServiceConfig(): array
     {
         return [
+            'aliases'   => [
+                ImageResizerInterface::class => ImageResizer::class,
+            ],
             'factories' => [
                 Service\ProfileProviderService::class  => Service\Factory\ProfileProviderServiceFactory::class,
                 Service\AssetUrlBuilder::class         => Service\Factory\AssetUrlBuilderFactory::class,
