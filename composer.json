@@ -1,11 +1,11 @@
 {
     "name": "contenir/contenir-asset-laminas-mvc",
-    "description": "Laminas MVC adapter for Contenir assets — keyed, profile-driven responsive image variants (incl. WebP/AVIF) backed by contenir/storage.",
+    "description": "Laminas MVC adapter for Contenir assets — keyed, profile-driven responsive image variants (incl. WebP/AVIF) backed by contenir/contenir-storage.",
     "type": "library",
     "license": "MIT",
     "require": {
         "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
-        "contenir/storage": "^2.0",
+        "contenir/contenir-storage": "^2.2",
         "laminas/laminas-cli": "^1.8",
         "laminas/laminas-http": "^2.0",
         "laminas/laminas-mvc": "^3.8",
@@ -64,7 +64,7 @@
     },
     "extra": {
         "branch-alias": {
-            "dev-main": "2.1.x-dev"
+            "dev-main": "2.2.x-dev"
         },
         "laminas": {
             "module": "Contenir\\Asset\\Laminas\\Mvc"
