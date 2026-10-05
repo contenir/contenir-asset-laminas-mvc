@@ -10,6 +10,8 @@ use Contenir\Storage\ListOptions;
 use Contenir\Storage\MissingVariantsReporterInterface;
 use Contenir\Storage\StorageInterface;
 use Contenir\Storage\StorageManager;
+use InvalidArgumentException;
+use Override;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -17,8 +19,11 @@ use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Throwable;
 
+use function array_values;
 use function count;
 use function implode;
+use function is_array;
+use function is_string;
 use function pathinfo;
 use function sprintf;
 use function str_contains;
@@ -41,21 +46,31 @@ use const PATHINFO_BASENAME;
  * original once and derives every missing variant from that single copy.
  *
  * Idempotent and re-runnable; safe to re-run while uploads continue.
+ *
+ * @mago-expect lint:cyclomatic-complexity One branch per option and per reported outcome; already split by step.
  */
 final class VariantsCommand extends Command
 {
-    private StorageManager $manager;
-
-    public function __construct(StorageManager $manager)
-    {
-        $this->manager = $manager;
+    public function __construct(
+        private readonly StorageManager $manager,
+    ) {
         parent::__construct();
     }
 
+    /**
+     * @mago-expect analysis:mixed-assignment Console options are untyped input; checked here.
+     */
+    private static function option(InputInterface $input, string $name): string
+    {
+        $value = $input->getOption($name);
+
+        return is_string($value) ? $value : '';
+    }
+
+    #[Override]
     protected function configure(): void
     {
-        $this
-            ->setName('storage:variants')
+        $this->setName('storage:variants')
             ->setDescription('Report and optionally backfill missing storage variants for a backend.')
             ->addOption(
                 'backend',
@@ -75,99 +90,81 @@ final class VariantsCommand extends Command
             ->addOption('generate', 'g', InputOption::VALUE_NONE, 'Generate the missing variants (default: report).');
     }
 
+    /**
+     * @throws InvalidArgumentException If no backend is registered.
+     * @throws NotFoundException        If the --prefix does not exist.
+     */
+    #[Override]
     protected function execute(InputInterface $input, OutputInterface $output): int
     {
         $io       = new SymfonyStyle($input, $output);
-        $prefix   = (string) $input->getOption('prefix');
-        $limit    = (int) $input->getOption('limit');
-        $generate = (bool) $input->getOption('generate');
-
-        $backendName = (string) $input->getOption('backend');
-        if ($backendName === '') {
-            $backendName = $this->manager->primaryKey();
-        }
-        if (! $this->manager->has($backendName)) {
-            $io->error(sprintf(
-                'Unknown backend "%s". Available: %s.',
-                $backendName,
-                implode(', ', $this->manager->profiles()),
-            ));
-
+        $prefix   = self::option($input, 'prefix');
+        $generate = true === $input->getOption('generate');
+        $storage  = $this->backend($io, self::option($input, 'backend'));
+        if (null === $storage) {
             return Command::FAILURE;
         }
-        $storage = $this->manager->get($backendName);
-
-        if (! $generate && ! $storage instanceof MissingVariantsReporterInterface) {
-            $io->error(sprintf('Backend "%s" cannot report missing variants.', $backendName));
+        if (! $generate && null === $storage['reporter']) {
+            $io->error(sprintf('Backend "%s" cannot report missing variants.', $storage['name']));
 
             return Command::FAILURE;
         }
 
         $io->title(sprintf(
             'storage:variants — backend=%s%s%s',
-            $backendName,
-            $prefix !== '' ? " prefix={$prefix}" : '',
+            $storage['name'],
+            '' === $prefix ? '' : " prefix={$prefix}",
             $generate ? ' [GENERATE]' : ' [report only]',
         ));
 
-        $originals = 0;
-        $complete  = 0;
-        $missing   = 0;
-        $generated = 0;
-        $errors    = 0;
-
-        foreach ($this->eachOriginal($storage, $prefix) as $entry) {
-            if ($limit > 0 && $originals >= $limit) {
-                break;
-            }
-            $originals++;
-
-            try {
-                if ($generate) {
-                    $keys = $storage->regenerateMissingVariants($entry->path);
-                    $generated += count($keys);
-                    foreach ($keys as $key) {
-                        $io->writeln("  <info>made</info> {$key}", OutputInterface::VERBOSITY_VERBOSE);
-                    }
-                } else {
-                    /** @var MissingVariantsReporterInterface $storage */
-                    $keys     = $storage->missingVariants($entry->path);
-                    $missing += count($keys);
-                    foreach ($keys as $key) {
-                        $io->writeln("  <comment>missing</comment> {$key}", OutputInterface::VERBOSITY_VERBOSE);
-                    }
-                }
-
-                if ($keys === []) {
-                    $complete++;
-                }
-            } catch (NotFoundException) {
-                // Listed a moment ago and gone now — a concurrent delete, not a fault.
-                $io->writeln("  <comment>vanished</comment> {$entry->path}", OutputInterface::VERBOSITY_VERBOSE);
-            } catch (Throwable $e) {
-                $errors++;
-                $io->writeln(sprintf('  <error>fail</error> %s: %s', $entry->path, $e->getMessage()));
-            }
-
-            if ($originals % 100 === 0) {
-                $io->writeln(
-                    sprintf('  … %d originals', $originals),
-                    OutputInterface::VERBOSITY_VERBOSE,
-                );
-            }
-        }
-
-        $io->newLine();
-        $io->table(
-            ['originals', 'complete', $generate ? 'generated' : 'missing', 'errors'],
-            [[$originals, $complete, $generate ? $generated : $missing, $errors]],
+        $tally = $this->walk(
+            $io,
+            $storage['backend'],
+            $generate ? null : $storage['reporter'],
+            $prefix,
+            (int) self::option(
+                $input,
+                'limit',
+            ),
         );
 
-        if (! $generate && $missing > 0) {
+        $io->newLine();
+        $io->table(['originals', 'complete', $generate ? 'generated' : 'missing', 'errors'], [array_values($tally)]);
+        if (! $generate && $tally['keys'] > 0) {
             $io->note('Re-run with --generate to create the missing variants.');
         }
 
-        return $errors > 0 ? Command::FAILURE : Command::SUCCESS;
+        return $tally['errors'] > 0 ? Command::FAILURE : Command::SUCCESS;
+    }
+
+    /**
+     * The named backend (the primary when $name is empty), or null after
+     * reporting why it cannot be used.
+     *
+     * @return array{name: string, backend: StorageInterface, reporter: ?MissingVariantsReporterInterface}|null
+     *
+     * @throws InvalidArgumentException If no backend is registered.
+     */
+    private function backend(SymfonyStyle $io, string $name): ?array
+    {
+        $name = '' === $name ? $this->manager->primaryKey() : $name;
+        if (! $this->manager->has($name)) {
+            $io->error(sprintf(
+                'Unknown backend "%s". Available: %s.',
+                $name,
+                implode(', ', $this->manager->profiles()),
+            ));
+
+            return null;
+        }
+
+        $backend = $this->manager->get($name);
+
+        return [
+            'name'     => $name,
+            'backend'  => $backend,
+            'reporter' => $backend instanceof MissingVariantsReporterInterface ? $backend : null,
+        ];
     }
 
     /**
@@ -175,11 +172,12 @@ final class VariantsCommand extends Command
      * a `__variant` suffix). list() is one level deep, so recurse directories.
      *
      * @return iterable<Entry>
+     *
+     * @throws NotFoundException If $path does not exist.
      */
     private function eachOriginal(StorageInterface $storage, string $path): iterable
     {
-        $options = new ListOptions(includeDirectories: true);
-        foreach ($storage->list($path, $options) as $entry) {
+        foreach ($storage->list($path, new ListOptions(includeDirectories: true)) as $entry) {
             if ($entry->isDir) {
                 yield from $this->eachOriginal($storage, $entry->path);
                 continue;
@@ -188,5 +186,77 @@ final class VariantsCommand extends Command
                 yield $entry;
             }
         }
+    }
+
+    /**
+     * Generate the variants one original is missing, or with a $reporter only
+     * report them. Returns the keys, false when the original vanished, or null
+     * on failure.
+     *
+     * @return list<string>|false|null
+     */
+    private function process(
+        SymfonyStyle $io,
+        Entry $entry,
+        StorageInterface $storage,
+        ?MissingVariantsReporterInterface $reporter,
+    ): array|false|null {
+        try {
+            $keys = null === $reporter
+                ? $storage->regenerateMissingVariants($entry->path)
+                : $reporter->missingVariants($entry->path);
+        } catch (NotFoundException) {
+            /**
+             * Listed a moment ago and gone now — a concurrent delete, not a fault.
+             */
+            $io->writeln("  <comment>vanished</comment> {$entry->path}", OutputInterface::VERBOSITY_VERBOSE);
+
+            return false;
+        } catch (Throwable $e) {
+            $io->writeln(sprintf('  <error>fail</error> %s: %s', $entry->path, $e->getMessage()));
+
+            return null;
+        }
+
+        $label = null === $reporter ? '<info>made</info>' : '<comment>missing</comment>';
+        foreach ($keys as $key) {
+            $io->writeln("  {$label} {$key}", OutputInterface::VERBOSITY_VERBOSE);
+        }
+
+        return $keys;
+    }
+
+    /**
+     * Process every original under $prefix, up to $limit (0 for no limit).
+     *
+     * @return array{originals: int, complete: int, keys: int, errors: int}
+     *
+     * @throws NotFoundException If $prefix does not exist.
+     */
+    private function walk(
+        SymfonyStyle $io,
+        StorageInterface $storage,
+        ?MissingVariantsReporterInterface $reporter,
+        string $prefix,
+        int $limit,
+    ): array {
+        $tally = ['originals' => 0, 'complete' => 0, 'keys' => 0, 'errors' => 0];
+        foreach ($this->eachOriginal($storage, $prefix) as $entry) {
+            if ($limit > 0 && $tally['originals'] >= $limit) {
+                break;
+            }
+            ++$tally['originals'];
+
+            $keys              = $this->process($io, $entry, $storage, $reporter);
+            $tally['errors']   += null === $keys ? 1 : 0;
+            $tally['complete'] += [] === $keys ? 1 : 0;
+            $tally['keys']     += is_array($keys) ? count($keys) : 0;
+
+            if (0 === ($tally['originals'] % 100)) {
+                $io->writeln(sprintf('  … %d originals', $tally['originals']), OutputInterface::VERBOSITY_VERBOSE);
+            }
+        }
+
+        return $tally;
     }
 }

@@ -5,8 +5,8 @@ declare(strict_types=1);
 namespace Contenir\Asset\Laminas\Mvc\Tests\TestAsset;
 
 use Contenir\Storage\Entry;
-use Contenir\Storage\ImageMeta;
 use Contenir\Storage\Exception\NotFoundException;
+use Contenir\Storage\ImageMeta;
 use Contenir\Storage\ListOptions;
 use Contenir\Storage\MissingVariantsReporterInterface;
 use Contenir\Storage\OnDemandVariantGeneratorInterface;
@@ -15,6 +15,7 @@ use Contenir\Storage\UploadInput;
 use DateTimeImmutable;
 use LogicException;
 
+use function array_key_exists;
 use function basename;
 use function in_array;
 
@@ -53,9 +54,42 @@ final class FakeOnDemandStorage implements
         }
     }
 
+    public function delete(string $path): void
+    {
+        throw new LogicException('not exercised');
+    }
+
+    public function exists(string $path): bool
+    {
+        return array_key_exists($path, $this->existing);
+    }
+
+    public function generateForKey(string $variantKey): ?string
+    {
+        $this->generated[]           = $variantKey;
+        $this->existing[$variantKey] = true;
+
+        return "https://cdn.test/{$variantKey}";
+    }
+
+    public function imageMeta(string $path): ImageMeta
+    {
+        throw new LogicException('not exercised');
+    }
+
+    public function list(string $path, ?ListOptions $options = null): iterable
+    {
+        if ('' !== $path) {
+            return;
+        }
+        foreach ($this->originals as $key) {
+            yield new Entry($key, basename($key), $key, false, 1, new DateTimeImmutable('@0'), 'image/jpeg');
+        }
+    }
+
     public function missingVariants(string $path): array
     {
-        if (in_array($path, $this->unreadable, true)) {
+        if (in_array($path, $this->unreadable, strict: true)) {
             throw NotFoundException::forPath($path);
         }
 
@@ -66,38 +100,25 @@ final class FakeOnDemandStorage implements
     {
         $keys = $this->missingVariants($path);
         foreach ($keys as $key) {
-            $this->generated[]           = $key;
-            $this->existing[$key]        = true;
+            $this->generated[]    = $key;
+            $this->existing[$key] = true;
         }
         $this->outstanding[$path] = [];
 
         return $keys;
     }
 
-    public function list(string $path, ?ListOptions $options = null): iterable
+    public function rename(string $from, string $to): void
     {
-        if ($path !== '') {
-            return;
-        }
-        foreach ($this->originals as $key) {
-            yield new Entry($key, basename($key), $key, false, 1, new DateTimeImmutable('@0'), 'image/jpeg');
-        }
-    }
-
-    public function exists(string $path): bool
-    {
-        return isset($this->existing[$path]);
-    }
-
-    public function generateForKey(string $variantKey): ?string
-    {
-        $this->generated[]            = $variantKey;
-        $this->existing[$variantKey]  = true;
-
-        return 'https://cdn.test/' . $variantKey;
+        throw new LogicException('not exercised');
     }
 
     public function store(UploadInput $upload, string $directory): Entry
+    {
+        throw new LogicException('not exercised');
+    }
+
+    public function thumbnailUrl(string $path): ?string
     {
         throw new LogicException('not exercised');
     }
@@ -115,26 +136,6 @@ final class FakeOnDemandStorage implements
 
     /** @return array<string, string> */
     public function variantUrls(string $path, string $variantName): array
-    {
-        throw new LogicException('not exercised');
-    }
-
-    public function delete(string $path): void
-    {
-        throw new LogicException('not exercised');
-    }
-
-    public function rename(string $from, string $to): void
-    {
-        throw new LogicException('not exercised');
-    }
-
-    public function imageMeta(string $path): ImageMeta
-    {
-        throw new LogicException('not exercised');
-    }
-
-    public function thumbnailUrl(string $path): ?string
     {
         throw new LogicException('not exercised');
     }

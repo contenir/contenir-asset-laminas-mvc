@@ -8,156 +8,32 @@ use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Storage\Variant;
 use Contenir\Storage\VariantFit;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
 #[Group('unit')]
 final class AssetUrlBuilderTest extends TestCase
 {
-    public function testOriginalUrlIsRootRelativeWithEmptyBase(): void
+    #[Test]
+    public function anEmptyFormatMeansTheSourceFormat(): void
+    {
+        static::assertSame('/docs/_variant/thumb/a.jpg', (new AssetUrlBuilder(''))->variantUrl(
+            'docs/a.jpg',
+            'thumb',
+            '',
+        ));
+    }
+
+    #[Test]
+    public function localOriginalUrlPercentEncodesPathSegments(): void
     {
         $builder = new AssetUrlBuilder('');
 
-        self::assertSame('/a/photo.jpg', $builder->originalUrl('/a/photo.jpg'));
+        static::assertSame('/a/my%20photo%20%281%29.jpg', $builder->originalUrl('/a/my photo (1).jpg'));
     }
 
-    public function testOriginalUrlHonoursPublicBase(): void
-    {
-        $builder = new AssetUrlBuilder('https://cdn.example.com');
-
-        self::assertSame('https://cdn.example.com/a/photo.jpg', $builder->originalUrl('/a/photo.jpg'));
-    }
-
-    public function testVariantUrlInsertsKeyedVariantDir(): void
-    {
-        $builder = new AssetUrlBuilder('');
-
-        self::assertSame('/a/_variant/tile-320/photo.jpg', $builder->variantUrl('/a/photo.jpg', 'tile-320'));
-    }
-
-    public function testVariantUrlSwapsExtensionForFormat(): void
-    {
-        $builder = new AssetUrlBuilder('');
-
-        self::assertSame('/a/_variant/tile-320/photo.avif', $builder->variantUrl('/a/photo.jpg', 'tile-320', 'avif'));
-    }
-
-    public function testVariantUrlForRootLevelFile(): void
-    {
-        $builder = new AssetUrlBuilder('');
-
-        self::assertSame('/_variant/tile-320/photo.jpg', $builder->variantUrl('photo.jpg', 'tile-320'));
-    }
-
-    public function testStripsPublicBasePrefixToAvoidDoubling(): void
-    {
-        $builder = new AssetUrlBuilder('/asset/library');
-
-        self::assertSame(
-            '/asset/library/a/_variant/tile-320/photo.jpg',
-            $builder->variantUrl('/asset/library/a/photo.jpg', 'tile-320'),
-        );
-    }
-
-    public function testSrcsetEmitsWidthDescriptorPerVariant(): void
-    {
-        $builder  = new AssetUrlBuilder('');
-        $variants = [
-            new Variant('tile-320', 320, 240, VariantFit::Cover),
-            new Variant('tile-640', 640, 480, VariantFit::Cover),
-        ];
-
-        self::assertSame(
-            '/a/_variant/tile-320/photo.jpg 320w, /a/_variant/tile-640/photo.jpg 640w',
-            $builder->srcset('/a/photo.jpg', $variants),
-        );
-    }
-
-    public function testSrcsetAppliesFormat(): void
-    {
-        $builder  = new AssetUrlBuilder('');
-        $variants = [new Variant('tile-320', 320, 240, VariantFit::Cover)];
-
-        self::assertSame(
-            '/a/_variant/tile-320/photo.webp 320w',
-            $builder->srcset('/a/photo.jpg', $variants, 'webp'),
-        );
-    }
-
-    public function testR2BackendBuildsSiblingKeyKeepingSourceExtension(): void
-    {
-        $builder = new AssetUrlBuilder('https://cdn.example.com', 'r2');
-
-        self::assertSame(
-            'https://cdn.example.com/asset/library/photo__card.jpg',
-            $builder->variantUrl('asset/library/photo.jpg', 'card'),
-        );
-    }
-
-    public function testR2BackendSwapsExtensionForFormat(): void
-    {
-        $builder = new AssetUrlBuilder('https://cdn.example.com', 'r2');
-
-        self::assertSame(
-            'https://cdn.example.com/asset/library/photo__card.avif',
-            $builder->variantUrl('asset/library/photo.jpg', 'card', 'avif'),
-        );
-    }
-
-    public function testR2BackendUsesObjectKeyVerbatimWithoutPrefixStripping(): void
-    {
-        // Unlike local, the CDN host is the public base, so the R2 object key is
-        // not a public-path prefix to strip.
-        $builder = new AssetUrlBuilder('https://cdn.example.com', 'r2');
-
-        self::assertSame(
-            'https://cdn.example.com/photo__card.webp',
-            $builder->variantUrl('/photo.jpg', 'card', 'webp'),
-        );
-    }
-
-    public function testR2BackendSrcsetEmitsSiblingKeysWithWidthDescriptors(): void
-    {
-        $builder  = new AssetUrlBuilder('https://cdn.example.com', 'r2');
-        $variants = [
-            new Variant('card-320', 320, 320, VariantFit::Cover),
-            new Variant('card-640', 640, 640, VariantFit::Cover),
-        ];
-
-        self::assertSame(
-            'https://cdn.example.com/a/photo__card-320.avif 320w, '
-            . 'https://cdn.example.com/a/photo__card-640.avif 640w',
-            $builder->srcset('a/photo.jpg', $variants, 'avif'),
-        );
-    }
-
-    public function testR2BackendPercentEncodesPathSegments(): void
-    {
-        $builder = new AssetUrlBuilder('https://cdn.example.com', 'r2');
-
-        self::assertSame(
-            'https://cdn.example.com/a/my%20photo__card.jpg',
-            $builder->variantUrl('a/my photo.jpg', 'card'),
-        );
-    }
-
-    public function testLocalOriginalUrlPercentEncodesPathSegments(): void
-    {
-        $builder = new AssetUrlBuilder('');
-
-        self::assertSame('/a/my%20photo%20%281%29.jpg', $builder->originalUrl('/a/my photo (1).jpg'));
-    }
-
-    public function testLocalVariantUrlPercentEncodesPathSegments(): void
-    {
-        $builder = new AssetUrlBuilder('');
-
-        self::assertSame(
-            '/a/_variant/card-320/my%20photo%20%281%29.jpg',
-            $builder->variantUrl('/a/my photo (1).jpg', 'card-320'),
-        );
-    }
-
-    public function testLocalSrcsetStaysParseableWhenFilenamesContainSpaces(): void
+    #[Test]
+    public function localSrcsetStaysParseableWhenFilenamesContainSpaces(): void
     {
         // An unencoded space ends the candidate URL as far as the srcset
         // tokeniser is concerned, and the browser drops the whole attribute --
@@ -168,9 +44,169 @@ final class AssetUrlBuilderTest extends TestCase
             new Variant('card-640', 640, 320, VariantFit::Cover),
         ];
 
-        self::assertSame(
+        static::assertSame(
             '/a/_variant/card-320/my%20photo.jpg 320w, /a/_variant/card-640/my%20photo.jpg 640w',
             $builder->srcset('/a/my photo.jpg', $variants),
         );
+    }
+
+    #[Test]
+    public function localVariantUrlPercentEncodesPathSegments(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        static::assertSame(
+            '/a/_variant/card-320/my%20photo%20%281%29.jpg',
+            $builder->variantUrl('/a/my photo (1).jpg', 'card-320'),
+        );
+    }
+
+    #[Test]
+    public function originalUrlHonoursPublicBase(): void
+    {
+        $builder = new AssetUrlBuilder('https://cdn.example.com');
+
+        static::assertSame('https://cdn.example.com/a/photo.jpg', $builder->originalUrl('/a/photo.jpg'));
+    }
+
+    #[Test]
+    public function originalUrlIsRootRelativeWithEmptyBase(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        static::assertSame('/a/photo.jpg', $builder->originalUrl('/a/photo.jpg'));
+    }
+
+    #[Test]
+    public function r2BackendBuildsSiblingKeyKeepingSourceExtension(): void
+    {
+        $builder = new AssetUrlBuilder('https://cdn.example.com', 'r2');
+
+        static::assertSame(
+            'https://cdn.example.com/asset/library/photo__card.jpg',
+            $builder->variantUrl('asset/library/photo.jpg', 'card'),
+        );
+    }
+
+    #[Test]
+    public function r2BackendPercentEncodesPathSegments(): void
+    {
+        $builder = new AssetUrlBuilder('https://cdn.example.com', 'r2');
+
+        static::assertSame(
+            'https://cdn.example.com/a/my%20photo__card.jpg',
+            $builder->variantUrl('a/my photo.jpg', 'card'),
+        );
+    }
+
+    #[Test]
+    public function r2BackendSrcsetEmitsSiblingKeysWithWidthDescriptors(): void
+    {
+        $builder  = new AssetUrlBuilder('https://cdn.example.com', 'r2');
+        $variants = [
+            new Variant('card-320', 320, 320, VariantFit::Cover),
+            new Variant('card-640', 640, 640, VariantFit::Cover),
+        ];
+
+        static::assertSame(
+            'https://cdn.example.com/a/photo__card-320.avif 320w, '
+                . 'https://cdn.example.com/a/photo__card-640.avif 640w',
+            $builder->srcset('a/photo.jpg', $variants, 'avif'),
+        );
+    }
+
+    #[Test]
+    public function r2BackendSwapsExtensionForFormat(): void
+    {
+        $builder = new AssetUrlBuilder('https://cdn.example.com', 'r2');
+
+        static::assertSame(
+            'https://cdn.example.com/asset/library/photo__card.avif',
+            $builder->variantUrl('asset/library/photo.jpg', 'card', 'avif'),
+        );
+    }
+
+    #[Test]
+    public function r2BackendUsesObjectKeyVerbatimWithoutPrefixStripping(): void
+    {
+        // Unlike local, the CDN host is the public base, so the R2 object key is
+        // not a public-path prefix to strip.
+        $builder = new AssetUrlBuilder('https://cdn.example.com', 'r2');
+
+        static::assertSame(
+            'https://cdn.example.com/photo__card.webp',
+            $builder->variantUrl('/photo.jpg', 'card', 'webp'),
+        );
+    }
+
+    #[Test]
+    public function siblingKeyOfAnExtensionlessObjectStaysExtensionless(): void
+    {
+        static::assertSame(
+            'https://cdn.test/docs/readme__thumb',
+            (new AssetUrlBuilder('https://cdn.test', 's3'))->variantUrl('docs/readme', 'thumb'),
+        );
+    }
+
+    #[Test]
+    public function srcsetAppliesFormat(): void
+    {
+        $builder  = new AssetUrlBuilder('');
+        $variants = [new Variant('tile-320', 320, 240, VariantFit::Cover)];
+
+        static::assertSame(
+            '/a/_variant/tile-320/photo.webp 320w',
+            $builder->srcset('/a/photo.jpg', $variants, 'webp'),
+        );
+    }
+
+    #[Test]
+    public function srcsetEmitsWidthDescriptorPerVariant(): void
+    {
+        $builder  = new AssetUrlBuilder('');
+        $variants = [
+            new Variant('tile-320', 320, 240, VariantFit::Cover),
+            new Variant('tile-640', 640, 480, VariantFit::Cover),
+        ];
+
+        static::assertSame(
+            '/a/_variant/tile-320/photo.jpg 320w, /a/_variant/tile-640/photo.jpg 640w',
+            $builder->srcset('/a/photo.jpg', $variants),
+        );
+    }
+
+    #[Test]
+    public function stripsPublicBasePrefixToAvoidDoubling(): void
+    {
+        $builder = new AssetUrlBuilder('/asset/library');
+
+        static::assertSame(
+            '/asset/library/a/_variant/tile-320/photo.jpg',
+            $builder->variantUrl('/asset/library/a/photo.jpg', 'tile-320'),
+        );
+    }
+
+    #[Test]
+    public function variantUrlForRootLevelFile(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        static::assertSame('/_variant/tile-320/photo.jpg', $builder->variantUrl('photo.jpg', 'tile-320'));
+    }
+
+    #[Test]
+    public function variantUrlInsertsKeyedVariantDir(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        static::assertSame('/a/_variant/tile-320/photo.jpg', $builder->variantUrl('/a/photo.jpg', 'tile-320'));
+    }
+
+    #[Test]
+    public function variantUrlSwapsExtensionForFormat(): void
+    {
+        $builder = new AssetUrlBuilder('');
+
+        static::assertSame('/a/_variant/tile-320/photo.avif', $builder->variantUrl('/a/photo.jpg', 'tile-320', 'avif'));
     }
 }

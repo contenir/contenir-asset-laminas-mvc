@@ -7,17 +7,14 @@ namespace Contenir\Asset\Laminas\Mvc\Controller;
 use Contenir\Asset\Laminas\Mvc\Service\VariantGenerator;
 use Laminas\Http\Response;
 use Laminas\Mvc\Controller\AbstractActionController;
+use Override;
 
-use function filesize;
-use function finfo_close;
-use function finfo_file;
-use function finfo_open;
-use function header;
+use function file_get_contents;
 use function is_file;
-use function readfile;
+use function is_string;
+use function mime_content_type;
+use function strlen;
 use function urldecode;
-
-use const FILEINFO_MIME_TYPE;
 
 /**
  * Serves keyed image variants on demand under
@@ -25,38 +22,53 @@ use const FILEINFO_MIME_TYPE;
  *
  * Existing variant files are served directly by the web server; only missing
  * ones reach this controller, which materialises them via {@see VariantGenerator}
- * and streams the result (or 404s when it cannot be produced).
+ * and returns the bytes (or a 404 when they cannot be produced).
  */
 final class AssetVariantController extends AbstractActionController
 {
-    public function __construct(private VariantGenerator $generator)
-    {
-    }
+    public function __construct(
+        private readonly VariantGenerator $generator,
+    ) {}
 
+    /**
+     * @mago-expect analysis:docblock-type-mismatch The parent documents a ViewModel; this action answers with the bytes.
+     * @mago-expect analysis:invalid-return-statement The parent documents a ViewModel; this action answers with the bytes.
+     */
+    #[Override]
     public function indexAction(): Response
     {
-        /** @var Response $response */
-        $response = $this->getResponse();
-        $folder   = urldecode((string) $this->params('folder'));
-        $name     = (string) $this->params('name');
-        $filename = urldecode((string) $this->params('filename'));
+        $response = new Response();
+        $path     = $this->generator->generate(
+            urldecode($this->routeParam('folder')),
+            $this->routeParam('name'),
+            urldecode($this->routeParam('filename')),
+        );
 
-        $path = $this->generator->generate($folder, $name, $filename);
-        if ($path === null || ! is_file($path)) {
-            return $response->setStatusCode(404);
+        if (null === $path || ! is_file($path)) {
+            return $response->setStatusCode(Response::STATUS_CODE_404);
         }
 
-        $finfo = finfo_open(FILEINFO_MIME_TYPE);
-        $mime  = ($finfo ? finfo_file($finfo, $path) : false) ?: 'application/octet-stream';
-        if ($finfo) {
-            finfo_close($finfo);
-        }
+        $content = (string) file_get_contents($path);
 
-        header('Content-Type: ' . $mime);
-        header('Content-Length: ' . filesize($path));
-        header('Cache-Control: public, max-age=31536000');
-        readfile($path);
+        $mime = mime_content_type($path);
+        $response->setContent($content);
+        $response->getHeaders()
+            ->addHeaders([
+                'Content-Type'   => false === $mime ? 'application/octet-stream' : $mime,
+                'Content-Length' => (string) strlen($content),
+                'Cache-Control'  => 'public, max-age=31536000',
+            ]);
 
-        exit;
+        return $response;
+    }
+
+    /**
+     * @mago-expect analysis:mixed-assignment Route parameters are untyped; checked here.
+     */
+    private function routeParam(string $name): string
+    {
+        $value = $this->getEvent()->getRouteMatch()?->getParam($name);
+
+        return is_string($value) ? $value : '';
     }
 }

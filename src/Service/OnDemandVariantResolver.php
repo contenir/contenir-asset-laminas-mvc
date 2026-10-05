@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Service;
 
+use Contenir\Storage\Exception\WriteException;
 use Contenir\Storage\OnDemandVariantGeneratorInterface;
 use Contenir\Storage\StorageManager;
 
@@ -18,13 +19,15 @@ use Contenir\Storage\StorageManager;
  */
 final class OnDemandVariantResolver
 {
-    public function __construct(private StorageManager $manager)
-    {
-    }
+    public function __construct(
+        private StorageManager $manager,
+    ) {}
 
     /**
      * Materialise the variant for $variantKey and return its public URL, or null
      * when no registered backend can produce it.
+     *
+     * @throws WriteException If the owning backend cannot generate or store the variant.
      */
     public function generate(string $variantKey): ?string
     {
@@ -35,7 +38,7 @@ final class OnDemandVariantResolver
             }
 
             $url = $backend->generateForKey($variantKey);
-            if ($url !== null) {
+            if (null !== $url) {
                 return $url;
             }
         }

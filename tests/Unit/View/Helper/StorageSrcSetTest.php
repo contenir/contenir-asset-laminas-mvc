@@ -8,11 +8,53 @@ use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\View\Helper\StorageSrcSet;
 use PHPUnit\Framework\Attributes\Group;
+use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
+
+use function restore_error_handler;
+use function set_error_handler;
+
+use const E_USER_WARNING;
 
 #[Group('unit')]
 final class StorageSrcSetTest extends TestCase
 {
+    #[Test]
+    public function rendersSrcsetOverProfileVariants(): void
+    {
+        $expected = '/a/_variant/tile-320/photo.jpg 320w, /a/_variant/tile-640/photo.jpg 640w';
+
+        static::assertSame($expected, $this->helper()('/a/photo.jpg', profile: 'tile'));
+    }
+
+    #[Test]
+    public function returnsEmptyStringForNullPath(): void
+    {
+        static::assertSame('', $this->helper()(null, profile: 'tile'));
+    }
+
+    #[Test]
+    public function warnsAndReturnsEmptyOnUnknownProfile(): void
+    {
+        $helper = new StorageSrcSet(new ProfileProviderService([]), new AssetUrlBuilder(''));
+
+        $warnings = [];
+        set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
+            $warnings[] = $errstr;
+            return true;
+        }, E_USER_WARNING);
+
+        try {
+            $result = $helper('/a/photo.jpg', profile: 'nope');
+        } finally {
+            restore_error_handler();
+        }
+
+        static::assertSame('', $result);
+        static::assertCount(1, $warnings);
+        static::assertStringContainsString('unknown image profile "nope"', $warnings[0]);
+    }
+
     private function helper(): StorageSrcSet
     {
         $profiles = new ProfileProviderService([
@@ -25,38 +67,5 @@ final class StorageSrcSetTest extends TestCase
         ]);
 
         return new StorageSrcSet($profiles, new AssetUrlBuilder(''));
-    }
-
-    public function testReturnsEmptyStringForNullPath(): void
-    {
-        self::assertSame('', ($this->helper())(null, 'tile'));
-    }
-
-    public function testRendersSrcsetOverProfileVariants(): void
-    {
-        $expected = '/a/_variant/tile-320/photo.jpg 320w, /a/_variant/tile-640/photo.jpg 640w';
-
-        self::assertSame($expected, ($this->helper())('/a/photo.jpg', 'tile'));
-    }
-
-    public function testWarnsAndReturnsEmptyOnUnknownProfile(): void
-    {
-        $helper = new StorageSrcSet(new ProfileProviderService([]), new AssetUrlBuilder(''));
-
-        $warnings = [];
-        set_error_handler(static function (int $errno, string $errstr) use (&$warnings): bool {
-            $warnings[] = $errstr;
-            return true;
-        }, E_USER_WARNING);
-
-        try {
-            $result = $helper('/a/photo.jpg', 'nope');
-        } finally {
-            restore_error_handler();
-        }
-
-        self::assertSame('', $result);
-        self::assertCount(1, $warnings);
-        self::assertStringContainsString('unknown image profile "nope"', $warnings[0]);
     }
 }

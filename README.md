@@ -1,48 +1,29 @@
 # contenir/contenir-asset-laminas-mvc
 
-Laminas MVC adapter for Contenir assets. Serves **on-demand responsive image
-variants** — including **WebP** and **AVIF** — backed by
-[`contenir/storage`](https://github.com/contenir/storage)'s `ImageResizer`.
+[![Continuous Integration](https://github.com/contenir/contenir-asset-laminas-mvc/actions/workflows/continuous-integration.yml/badge.svg)](https://github.com/contenir/contenir-asset-laminas-mvc/actions/workflows/continuous-integration.yml)
+[![codecov](https://codecov.io/gh/contenir/contenir-asset-laminas-mvc/graph/badge.svg)](https://codecov.io/gh/contenir/contenir-asset-laminas-mvc)
 
-Variants are **keyed by profile**: a template passes one profile key (e.g.
-`'tile'`) and the responsive behaviour — widths, crop/scale, quality, the HTML
-`sizes` attribute, and output formats — all comes from the shared
-`settings.storage.profiles` config that the CMS reads too. No per-template width
-lists, no hand-written `sizes`. Generated variant files share the
-`_variant/<name>/` directory `contenir/storage` writes to, so the CMS-generated
-renditions and the front-end's format siblings live together.
+Laminas MVC module for Contenir assets: keyed, profile-driven responsive image
+variants (including WebP and AVIF) on top of
+[contenir/storage](https://github.com/contenir/storage).
 
-## What it provides
+A template names one profile (for example `'card'`) and gets the whole
+responsive set: srcset ladder, `sizes` attribute and `<picture>` sources in
+extra formats. The profiles are the same `storage.variants` declarations the
+CMS and `contenir/storage` read, so there is one source of truth.
 
-- **`AssetVariantController` + `assetvariant` route** — serves
-  `/asset/<folder>/_variant/<name>/<filename>`. Existing variant files are served
-  directly by the web server; only missing ones reach the controller, which
-  resizes on demand (per the named variant's definition) and streams the result.
-- **`ProfileProviderService`** — reads `settings.storage.profiles` and exposes
-  typed `Contenir\Asset\Laminas\Mvc\Profile\Profile` / `Contenir\Storage\Variant`
-  objects. Variant names are globally unique, so a bare name resolves to one
-  definition.
-- **View helpers** for templates:
-  - `storageSrcSet($path, $profile)` — responsive `srcset` over the profile's
-    variant ladder (source format).
-  - `storageSizes($profile)` — the profile's configured `sizes` attribute.
-  - `storageSources($path, $profile)` — `<source>` elements (one per profile
-    `formats` entry, e.g. AVIF then WebP) for a `<picture>`.
-  - `storageUrl($path, $variant = null, $format = null)` — a single URL (original,
-    or a named `_variant/<name>/` variant, optionally in a given format).
-- **`AssetUrlBuilder`** — the pure string URL builder behind the helpers. Returns
-  **raw** URLs; escaping is the output context's job.
+- **View helpers:** `storageSrcSet()`, `storageSizes()`, `storageSources()` and `storageUrl()`.
+- **On-demand variants:** a route and controller that generate a missing local
+  variant on first request, and a secret-guarded endpoint an edge worker calls
+  to generate a missing S3/R2 sibling.
+- **CLI:** `storage:variants` to audit and backfill a backend.
 
-## URL scheme
+## Requirements
 
-```
-/asset/<folder>/_variant/<name>/<file>.<fmt>
-```
-
-`<name>` is a profile's variant key (e.g. `tile-640`); `<fmt>` is the source
-extension, `webp`, or `avif`. When the requested format cannot be produced (e.g.
-the ImageMagick build lacks AVIF), the controller falls back to a source-format
-variant so the URL returns valid image bytes rather than a 404.
+- PHP 8.3, 8.4 or 8.5
+- `contenir/storage` 0.6.1+ or 2.x
+- laminas-mvc 3, laminas-view 2, laminas-router 3, laminas-http 2, laminas-cli 1.8+
+- ImageMagick (imagick extension or `magick`/`convert` CLI) for local generation
 
 ## Installation
 
@@ -50,70 +31,63 @@ variant so the URL returns valid image bytes rather than a 404.
 composer require contenir/contenir-asset-laminas-mvc
 ```
 
-If you use `laminas/laminas-component-installer`, the module is registered
-automatically; otherwise add `Contenir\Asset\Laminas\Mvc` to
-`config/modules.config.php`.
+With `laminas/laminas-component-installer` the module is registered for you;
+otherwise add `Contenir\Asset\Laminas\Mvc` to `config/modules.config.php`.
 
 ## Configuration
 
-This package reads **two** config keys:
+Everything lives under the `storage` key that `contenir/storage` reads:
 
-1. **`settings.storage.profiles`** — the shared profile catalogue (also read by
-   the CMS). Each variant carries its own width/height/fit/quality; add a `sizes`
-   string and a `formats` list per profile for the front-end:
+```php
+'storage' => [
+    'backend' => [
+        'local' => ['type' => 'local', 'root_path' => 'public', 'public_path' => ''],
+        // or an S3/R2 primary: ['type' => 's3', 'default' => true, 'publicUrl' => 'https://cdn…', 'generate_secret' => '…', …]
+    ],
+    'variants' => [
+        'admin-thumb' => ['width' => 180, 'height' => 180, 'fit' => 'contain'],
+        'card'        => ['dimensions' => ['320x', '640x', '960x'], 'sizes' => '(min-width: 768px) 33vw, 100vw', 'formats' => ['avif', 'webp']],
+    ],
+],
+```
 
-   ```php
-   'settings' => [
-       'storage' => [
-           'profiles' => [
-               'tile' => [
-                   'type'       => 'local',
-                   'rootPath'   => './public/asset/library',
-                   'publicPath' => '/asset/library',
-                   'sizes'      => '(min-width: 768px) 33vw, 100vw',
-                   'formats'    => ['avif', 'webp'],
-                   'variants'   => [
-                       'admin-thumb' => ['width' => 180, 'height' => 180, 'fit' => 'contain'],
-                       'tile-320'    => ['width' => 320, 'height' => 240, 'fit' => 'cover', 'quality' => 80],
-                       'tile-640'    => ['width' => 640, 'height' => 480, 'fit' => 'cover', 'quality' => 80],
-                   ],
-               ],
-           ],
-       ],
-   ],
-   ```
-
-   Variant names are **globally unique** across profiles (so `_variant/<name>/`
-   is unambiguous and shared with `contenir/storage`). The `admin-thumb` variant
-   is the CMS preview and is never emitted in front-end `srcset`/`sources`.
-
-2. **`storage.asset`** — the on-disk / URL base, in
-   `config/autoload/storage.global.php`:
-
-   ```php
-   return [
-       'storage' => [
-           'asset' => [
-               'root_path'   => 'public',
-               'public_path' => '',
-               // 'binary'   => '/opt/homebrew/bin/magick', // optional; auto-discovered otherwise
-           ],
-       ],
-   ];
-   ```
+The primary backend decides the URL scheme (`_variant/<name>/` locally,
+`<key>__<name>.<ext>` siblings on S3/R2). See [docs/configuration.md](docs/configuration.md).
 
 ## Usage in templates
 
-One key drives everything:
-
 ```php
 <picture>
-    <?= $this->storageSources($asset->path, 'tile') ?>
-    <img
-        data-lazysrc
-        data-lazysrc-srcset="<?= $this->storageSrcSet($asset->path, 'tile') ?>"
-        sizes="<?= $this->storageSizes('tile') ?>"
-        src="<?= $this->storageUrl($asset->path, 'tile-320') ?>"
-        alt="">
+    <?= $this->storageSources($asset->path, 'card') ?>
+    <img srcset="<?= $this->storageSrcSet($asset->path, 'card') ?>"
+         sizes="<?= $this->storageSizes('card') ?>"
+         src="<?= $this->storageUrl($asset->path, 'card-320') ?>"
+         alt="">
 </picture>
 ```
+
+## Documentation
+
+- [Configuration](docs/configuration.md)
+- [View helpers](docs/view-helpers.md)
+- [Serving and generating variants](docs/variant-serving.md)
+- [The storage:variants command](docs/cli.md)
+
+## Development
+
+The QA toolchain is [php-db/phpdb-qa-tools](https://github.com/php-db/phpdb-qa-tools).
+[Mago](https://mago.carthage.software/) is a standalone binary, installed
+separately (`brew install mago`).
+
+```bash
+composer check             # everything below
+composer cs-check          # mago format --check && mago lint
+composer static-analysis   # mago analyze
+composer test              # unit suite: no I/O, collaborators doubled
+composer test-integration  # integration suite: real files, ImageMagick and Laminas containers
+composer test-coverage     # both suites, clover.xml for Codecov
+```
+
+## License
+
+MIT. See [LICENSE](LICENSE).
