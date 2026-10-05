@@ -19,6 +19,7 @@ use PHPUnit\Framework\TestCase;
 use function exec;
 use function extension_loaded;
 use function getimagesize;
+use function is_file;
 use function str_ends_with;
 use function strlen;
 use function strtolower;
@@ -42,6 +43,16 @@ final class VariantGeneratorTest extends TestCase
     }
 
     #[Test]
+    public function fallsBackToALowercasedSourceExtension(): void
+    {
+        $this->writePng('asset/foo/pic.PNG', 10, 10);
+
+        $path = $this->generator($this->resizerFailingFor('.avif'))->generate('foo', 't-80', 'pic.avif');
+
+        static::assertSame($this->path('asset/foo/_variant/t-80/pic.png'), $path);
+    }
+
+    #[Test]
     public function fallsBackToTheSourceFormatWhenTheRequestedOneCannotBeProduced(): void
     {
         $this->writePng('asset/foo/pic.png', 10, 10);
@@ -49,6 +60,20 @@ final class VariantGeneratorTest extends TestCase
         $path = $this->generator($this->resizerFailingFor('.avif'))->generate('foo', 't-80', 'pic.avif');
 
         static::assertSame($this->path('asset/foo/_variant/t-80/pic.png'), $path);
+    }
+
+    #[Test]
+    public function findsASourceWithAnUppercaseExtension(): void
+    {
+        if (is_file($this->writePng('asset/foo/probe.png', 1, 1)) && is_file($this->path('asset/foo/probe.PNG'))) {
+            self::markTestSkipped('The filesystem is case-insensitive, so extension case cannot be observed.');
+        }
+        $this->writePng('asset/foo/pic.PNG', 10, 10);
+        $resizer = new StubImageResizer();
+
+        $this->generator($resizer)->generate('foo', 't-80', 'pic.webp');
+
+        static::assertSame($this->path('asset/foo/pic.PNG'), $resizer->calls[0]['source'] ?? null);
     }
 
     #[Test]
@@ -83,9 +108,47 @@ final class VariantGeneratorTest extends TestCase
     }
 
     #[Test]
+    public function lowercasesTheRequestedExtension(): void
+    {
+        $this->writePng('asset/foo/pic.png', 10, 10);
+
+        $path = $this->generator(new StubImageResizer())->generate('foo', 't-80', 'pic.WEBP');
+
+        static::assertSame($this->path('asset/foo/_variant/t-80/pic.webp'), $path);
+    }
+
+    #[Test]
+    public function prefersALowercaseSourceExtension(): void
+    {
+        $this->writePng('asset/foo/pic.png', 10, 10);
+        $resizer = new StubImageResizer();
+
+        $this->generator($resizer)->generate('foo', 't-80', 'pic.webp');
+
+        static::assertSame($this->path('asset/foo/pic.png'), $resizer->calls[0]['source'] ?? null);
+    }
+
+    #[Test]
+    public function prefersTheSourceNamedExactlyByTheRequest(): void
+    {
+        $this->writePng('asset/foo/pic.jpg', 10, 10);
+        $this->writePng('asset/foo/pic.png', 10, 10);
+        $resizer = new StubImageResizer();
+
+        $this->generator($resizer)->generate('foo', 't-80', 'pic.png');
+
+        static::assertSame($this->path('asset/foo/pic.png'), $resizer->calls[0]['source'] ?? null);
+    }
+
+    #[Test]
     #[DataProvider('unsafeFolderProvider')]
     public function refusesAFolderOutsideTheAssetDirectory(string $folder): void
     {
+        /**
+         * The asset directory has to exist, or `asset/../outside` would not
+         * resolve and the guard would go untested.
+         */
+        $this->writePng('asset/foo/pic.png', 10, 10);
         $this->writePng('outside/pic.png', 10, 10);
         $resizer = new StubImageResizer();
 

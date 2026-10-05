@@ -1,0 +1,25 @@
+{
+    "$schema": "vendor/infection/infection/resources/schema.json",
+    "source": { "directories": ["src"] },
+    "timeout": 10,
+    "threads": "max",
+    "logs": {
+        "text": "infection.log",
+        "summary": "summary.log",
+        "stryker": { "badge": "/^(main|master)$/" }
+    },
+    "mutators": {
+        "@default": true,
+        // laminas-http builds the header line by string concatenation, so an
+        // int Content-Length produces the same header as the string.
+        "CastString": {
+            "ignore": ["Contenir\\Asset\\Laminas\\Mvc\\Controller\\AssetVariantController::indexAction"]
+        },
+        // Symfony's Table renders a row's cells in order whatever their keys,
+        // so the associative tally prints the same as its array_values().
+        "UnwrapArrayValues": {
+            "ignore": ["Contenir\\Asset\\Laminas\\Mvc\\Command\\VariantsCommand::execute"]
+        }
+    },
+    "staticAnalysisTool": "mago"
+}

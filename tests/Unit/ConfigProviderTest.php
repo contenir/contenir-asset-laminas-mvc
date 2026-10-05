@@ -4,7 +4,10 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Tests\Unit;
 
+use Contenir\Asset\Laminas\Mvc\Command\VariantsCommand;
 use Contenir\Asset\Laminas\Mvc\ConfigProvider;
+use Contenir\Asset\Laminas\Mvc\Controller\AssetVariantController;
+use Contenir\Asset\Laminas\Mvc\Controller\AssetVariantGenerateController;
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\Service\VariantGenerator;
@@ -13,9 +16,29 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
 
+use function array_keys;
+
 #[Group('unit')]
 final class ConfigProviderTest extends TestCase
 {
+    #[Test]
+    public function exposesEachConfigSectionPublicly(): void
+    {
+        $provider = new ConfigProvider();
+
+        static::assertSame(
+            [
+                'storage'         => $provider->getStorageDefaults(),
+                'router'          => $provider->getRouteConfig(),
+                'controllers'     => $provider->getControllerConfig(),
+                'service_manager' => $provider->getServiceConfig(),
+                'view_helpers'    => $provider->getViewHelperConfig(),
+                'laminas-cli'     => $provider->getCliConfig(),
+            ],
+            $provider(),
+        );
+    }
+
     #[Test]
     public function providesExpectedTopLevelKeys(): void
     {
@@ -26,6 +49,15 @@ final class ConfigProviderTest extends TestCase
         static::assertArrayHasKey('controllers', $config);
         static::assertArrayHasKey('service_manager', $config);
         static::assertArrayHasKey('view_helpers', $config);
+    }
+
+    #[Test]
+    public function registersControllers(): void
+    {
+        static::assertSame(
+            [AssetVariantController::class, AssetVariantGenerateController::class],
+            array_keys((new ConfigProvider())->getControllerConfig()['factories']),
+        );
     }
 
     #[Test]
@@ -46,6 +78,15 @@ final class ConfigProviderTest extends TestCase
         static::assertArrayHasKey(ProfileProviderService::class, $factories);
         static::assertArrayHasKey(AssetUrlBuilder::class, $factories);
         static::assertArrayHasKey(VariantGenerator::class, $factories);
+    }
+
+    #[Test]
+    public function registersTheVariantsCommand(): void
+    {
+        static::assertSame(
+            ['commands' => ['storage:variants' => VariantsCommand::class]],
+            (new ConfigProvider())->getCliConfig(),
+        );
     }
 
     #[Test]

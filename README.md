@@ -86,6 +86,7 @@ composer static-analysis   # mago analyze
 composer test              # unit suite: no I/O, collaborators doubled
 composer test-integration  # integration suite: real files, ImageMagick and Laminas containers
 composer test-coverage     # both suites, clover.xml for Codecov
+composer mutation-test     # Infection over both suites (needs Xdebug or PCOV)
 ```
 
 ## License

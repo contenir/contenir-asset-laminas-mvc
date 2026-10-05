@@ -55,12 +55,35 @@ final class FactoriesTest extends TestCase
                 ['r2' => ['type' => 's3', 'default' => true, 'public_base_url' => 'https://cdn.test']],
                 'https://cdn.test/a/b__thumb.jpg',
             ],
+            's3 both bases'         => [
+                ['r2' => [
+                    'type'            => 's3',
+                    'default'         => true,
+                    'public_base_url' => 'https://primary.test',
+                    'publicUrl'       => 'https://alias.test',
+                ]],
+                'https://primary.test/a/b__thumb.jpg',
+            ],
             's3 publicUrl fallback' => [
                 ['r2' => ['type' => 's3', 'default' => true, 'publicUrl' => 'https://cdn.test']],
                 'https://cdn.test/a/b__thumb.jpg',
             ],
             's3 without a base'     => [['r2' => ['type' => 's3', 'default' => true]], '/a/b__thumb.jpg'],
         ];
+    }
+
+    /**
+     * @mago-expect lint:no-literal-password A dummy shared secret.
+     */
+    #[Test]
+    public function generateControllerIsGuardedByTheConfiguredSecret(): void
+    {
+        $controller = (new AssetVariantGenerateControllerFactory())(new InMemoryContainer([
+            'config'                       => ['storage' => ['backend' => ['local' => ['generate_secret' => 's']]]],
+            OnDemandVariantResolver::class => new OnDemandVariantResolver(new StorageManager()),
+        ]));
+
+        static::assertSame(403, $controller->generateAction()->getStatusCode());
     }
 
     #[Test]
