@@ -13,10 +13,13 @@ use Contenir\Storage\Image\ImageResizerInterface;
 use Contenir\Storage\StorageManager;
 use Laminas\EventManager\EventManager;
 use Laminas\EventManager\SharedEventManager;
+use Laminas\Http\Request;
 use Laminas\Mvc\Controller\ControllerManager;
 use Laminas\Mvc\Controller\PluginManager;
+use Laminas\Router\Http\TreeRouteStack;
 use Laminas\ServiceManager\ServiceManager;
 use Laminas\View\HelperPluginManager;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use PHPUnit\Framework\TestCase;
@@ -32,6 +35,22 @@ final class ModuleWiringTest extends TestCase
 
     /** @var array<string, mixed> */
     private array $config;
+
+    /**
+     * @return array<string, array{string, string, string, array<string, string>}>
+     */
+    public static function routeProvider(): array
+    {
+        return [
+            'variant'  => [
+                '/asset/news/2024/_variant/card-320/a.jpg',
+                AssetVariantController::class,
+                'index',
+                ['folder' => 'news/2024', 'name' => 'card-320', 'filename' => 'a.jpg'],
+            ],
+            'generate' => ['/asset-variant/generate', AssetVariantGenerateController::class, 'generate', []],
+        ];
+    }
 
     #[Test]
     public function controllersResolveThroughTheControllerManager(): void
@@ -51,6 +70,22 @@ final class ModuleWiringTest extends TestCase
         static::assertSame(
             $this->services->get(ImageResizer::class),
             $this->services->get(ImageResizerInterface::class),
+        );
+    }
+
+    /**
+     * @param array<string, string> $params
+     */
+    #[Test]
+    #[DataProvider('routeProvider')]
+    public function routesReachTheirControllers(string $path, string $controller, string $action, array $params): void
+    {
+        $router = TreeRouteStack::factory($this->config['router']);
+        $match  = $router->match((new Request())->setUri("https://example.test{$path}"));
+
+        static::assertSame(
+            ['controller' => $controller, 'action' => $action, ...$params],
+            $match?->getParams(),
         );
     }
 

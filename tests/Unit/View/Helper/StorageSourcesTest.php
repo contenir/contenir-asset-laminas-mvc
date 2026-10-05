@@ -76,7 +76,7 @@ final class StorageSourcesTest extends TestCase
     public function returnsEmptyStringWhenTheProfileHasNoVariants(): void
     {
         $helper = new StorageSources(new ProfileProviderService([
-            'empty' => ['variants' => []],
+            'empty' => ['variants' => [], 'formats' => ['webp']],
         ]), new AssetUrlBuilder(''));
 
         static::assertSame('', $helper('a.jpg', profile: 'empty'));

@@ -4,6 +4,12 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- Infection mutation testing in CI, MSI 100% (the 2 mutants that survive locally on case-insensitive macOS file systems are killed on Linux CI).
+
 ## [2.1.0] - Unreleased
 
 ### Changed

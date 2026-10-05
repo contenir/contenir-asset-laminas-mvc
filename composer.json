@@ -15,6 +15,7 @@
         "symfony/console": "^6.4.10 || ^7.1.3"
     },
     "require-dev": {
+        "infection/infection": "^0.34.1",
         "php-db/phpdb-qa-tools": "0.1.x-dev",
         "phpunit/phpunit": "^11.5.42",
         "symfony/string": "^6.4.10 || ^7.1.3"
@@ -34,7 +35,8 @@
             "@cs-check",
             "@static-analysis",
             "@test",
-            "@test-integration"
+            "@test-integration",
+            "@mutation-test"
         ],
         "cs-check": [
             "mago format --check",
@@ -47,11 +49,13 @@
         "static-analysis": "mago analyze",
         "test": "phpunit --colors=always --testsuite unit",
         "test-integration": "phpunit --colors=always --testsuite integration",
-        "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
+        "test-coverage": "phpunit --colors=always --coverage-clover clover.xml",
+        "mutation-test": "infection"
     },
     "config": {
         "allow-plugins": {
-            "laminas/laminas-component-installer": true
+            "laminas/laminas-component-installer": true,
+            "infection/extension-installer": true
         },
         "platform": {
             "php": "8.3.99"

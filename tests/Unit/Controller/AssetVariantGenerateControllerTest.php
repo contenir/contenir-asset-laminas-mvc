@@ -34,7 +34,9 @@ final class AssetVariantGenerateControllerTest extends TestCase
     #[Test]
     public function isUnavailableWithoutAConfiguredSecret(): void
     {
-        $response = $this->dispatch('', $this->request('anything', 'k.jpg'));
+        $controller = new AssetVariantGenerateController(new OnDemandVariantResolver(new StorageManager()), '');
+
+        $response = $controller->generateAction();
 
         static::assertSame([503, '{"error":"generation endpoint not configured"}'], [
             $response->getStatusCode(),

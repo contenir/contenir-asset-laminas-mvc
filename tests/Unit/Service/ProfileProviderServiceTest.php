@@ -123,6 +123,24 @@ final class ProfileProviderServiceTest extends TestCase
     }
 
     #[Test]
+    public function legacyVariantWithoutAWidthHasZeroWidth(): void
+    {
+        $provider = new ProfileProviderService(['legacy' => ['variants' => ['tall' => ['height' => 400]]]]);
+
+        static::assertSame(0, $provider->variant('tall')?->width);
+    }
+
+    #[Test]
+    public function malformedLegacyVariantDoesNotHideTheVariantsAfterIt(): void
+    {
+        $provider = new ProfileProviderService([
+            'legacy' => ['variants' => ['bad' => 'nope', 'good' => ['width' => 320]]],
+        ]);
+
+        static::assertSame(320, $provider->variant('good')?->width);
+    }
+
+    #[Test]
     public function nonArrayProfileIsSkipped(): void
     {
         static::assertFalse($this->provider()->has('bogus'));

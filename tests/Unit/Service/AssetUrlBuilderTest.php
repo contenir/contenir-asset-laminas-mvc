@@ -25,6 +25,27 @@ final class AssetUrlBuilderTest extends TestCase
     }
 
     #[Test]
+    public function collapsesASlashLeftOverAfterStrippingThePublicBase(): void
+    {
+        static::assertSame('/media/a.jpg', (new AssetUrlBuilder('/media'))->originalUrl('/media//a.jpg'));
+    }
+
+    #[Test]
+    public function ignoresATrailingSlashOnThePublicBase(): void
+    {
+        static::assertSame('/media/a/photo.jpg', (new AssetUrlBuilder('/media/'))->originalUrl('a/photo.jpg'));
+    }
+
+    #[Test]
+    public function keepsAPathThatMerelyStartsWithThePublicBaseName(): void
+    {
+        static::assertSame(
+            '/media/mediafiles/a.jpg',
+            (new AssetUrlBuilder('/media'))->originalUrl('mediafiles/a.jpg'),
+        );
+    }
+
+    #[Test]
     public function localOriginalUrlPercentEncodesPathSegments(): void
     {
         $builder = new AssetUrlBuilder('');
@@ -146,6 +167,14 @@ final class AssetUrlBuilderTest extends TestCase
             'https://cdn.test/docs/readme__thumb',
             (new AssetUrlBuilder('https://cdn.test', 's3'))->variantUrl('docs/readme', 'thumb'),
         );
+    }
+
+    #[Test]
+    public function siblingSchemeUsesTheStoredKeyVerbatimEvenWhenItRepeatsTheBase(): void
+    {
+        $builder = new AssetUrlBuilder('/bucket', 's3');
+
+        static::assertSame('/bucket/bucket/a__thumb.jpg', $builder->variantUrl('bucket/a.jpg', 'thumb'));
     }
 
     #[Test]
