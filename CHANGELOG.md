@@ -8,7 +8,7 @@ adheres to [Semantic Versioning](https://semver.org/).
 
 ### Added
 
-- Infection mutation testing in CI, MSI 99%.
+- Infection mutation testing in CI, MSI 100% (the 2 mutants that survive locally on case-insensitive macOS file systems are killed on Linux CI).
 
 ## [2.1.0] - Unreleased
 
