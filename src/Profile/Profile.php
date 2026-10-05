@@ -22,6 +22,5 @@ final class Profile
         public readonly string $sizes,
         public readonly array $formats,
         public readonly array $variants,
-    ) {
-    }
+    ) {}
 }

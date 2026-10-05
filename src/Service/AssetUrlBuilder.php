@@ -13,7 +13,6 @@ use function explode;
 use function implode;
 use function ltrim;
 use function preg_replace;
-use function rawurlencode;
 use function rtrim;
 use function sprintf;
 use function str_starts_with;
@@ -41,46 +40,22 @@ use function substr;
  */
 final class AssetUrlBuilder
 {
-    private const VARIANT_DIR = '_variant';
+    public const string BACKEND_LOCAL = 'local';
 
-    public const BACKEND_LOCAL = 'local';
+    private const string VARIANT_DIR = '_variant';
 
     private string $publicBase;
     private bool $siblingScheme;
 
     public function __construct(string $publicBase, string $backend = self::BACKEND_LOCAL)
     {
-        $this->publicBase    = rtrim($publicBase, '/');
-        $this->siblingScheme = $backend !== self::BACKEND_LOCAL;
+        $this->publicBase    = rtrim($publicBase, characters: '/');
+        $this->siblingScheme = self::BACKEND_LOCAL !== $backend;
     }
 
     public function originalUrl(string $path): string
     {
-        $key = $this->key($path);
-
-        return $this->absoluteEncoded($key);
-    }
-
-    public function variantUrl(string $path, string $name, ?string $format = null): string
-    {
-        $key = $this->key($path);
-
-        if ($this->siblingScheme) {
-            return $this->absoluteEncoded($this->siblingKey($key, $name, $format));
-        }
-
-        $dir  = $this->dirname($key);
-        $file = basename($key);
-
-        if ($format !== null && $format !== '') {
-            $file = preg_replace('/\.[^.\/]+$/', '.' . $format, $file) ?? $file . '.' . $format;
-        }
-
-        $variantKey = $dir === ''
-            ? sprintf('%s/%s/%s', self::VARIANT_DIR, $name, $file)
-            : sprintf('%s/%s/%s/%s', $dir, self::VARIANT_DIR, $name, $file);
-
-        return $this->absoluteEncoded($variantKey);
+        return $this->absoluteEncoded($this->key($path));
     }
 
     /**
@@ -90,27 +65,47 @@ final class AssetUrlBuilder
     {
         $entries = [];
         foreach ($variants as $variant) {
-            $entries[] = $this->variantUrl($path, $variant->name, $format) . ' ' . $variant->width . 'w';
+            $entries[] = "{$this->variantUrl($path, $variant->name, $format)} {$variant->width}w";
         }
 
         return implode(', ', $entries);
     }
 
-    /**
-     * Sibling-object key for the s3/r2 scheme: `<base>__<name>.<format>`, where
-     * `<base>` is the key with its extension stripped. A null/empty $format keeps
-     * the source extension (the <img> fallback); otherwise the extension is
-     * swapped for the requested format (the avif/webp <source>s).
-     */
-    private function siblingKey(string $key, string $name, ?string $format): string
+    public function variantUrl(string $path, string $name, ?string $format = null): string
     {
-        $dot  = strrpos($key, '.');
-        $base = $dot === false ? $key : substr($key, 0, $dot);
-        $ext  = $format !== null && $format !== ''
-            ? '.' . $format
-            : ($dot === false ? '' : substr($key, $dot));
+        $key    = $this->key($path);
+        $format = '' === $format ? null : $format;
 
-        return $base . '__' . $name . $ext;
+        if ($this->siblingScheme) {
+            return $this->absoluteEncoded($this->siblingKey($key, $name, $format));
+        }
+
+        $dir  = dirname($key);
+        $file = basename($key);
+        if (null !== $format) {
+            $file =
+                preg_replace(
+                    pattern: '/\.[^.\/]+$/',
+                    replacement: ".{$format}",
+                    subject: $file,
+                ) ?? $file;
+        }
+
+        $variantKey = '.' === $dir
+            ? sprintf('%s/%s/%s', self::VARIANT_DIR, $name, $file)
+            : sprintf('%s/%s/%s/%s', $dir, self::VARIANT_DIR, $name, $file);
+
+        return $this->absoluteEncoded($variantKey);
+    }
+
+    private function absoluteEncoded(string $key): string
+    {
+        $segments = explode(
+            separator: '/',
+            string: ltrim($key, characters: '/'),
+        );
+
+        return $this->publicBase . '/' . implode('/', array_map(rawurlencode(...), $segments));
     }
 
     /**
@@ -121,30 +116,31 @@ final class AssetUrlBuilder
      */
     private function key(string $path): string
     {
-        $path = ltrim($path, '/');
-        if ($this->siblingScheme) {
+        $path   = ltrim($path, characters: '/');
+        $prefix = ltrim($this->publicBase, characters: '/') . '/';
+        if ($this->siblingScheme || '/' === $prefix || ! str_starts_with($path, $prefix)) {
             return $path;
         }
 
-        $prefix = ltrim($this->publicBase, '/');
-        if ($prefix !== '' && str_starts_with($path, $prefix . '/')) {
-            $path = substr($path, strlen($prefix) + 1);
-        }
-
-        return $path;
+        return substr($path, strlen($prefix));
     }
 
-    private function dirname(string $path): string
+    /**
+     * Sibling-object key for the s3/r2 scheme: `<base>__<name>.<format>`, where
+     * `<base>` is the key with its extension stripped. A null $format keeps the
+     * source extension (the <img> fallback); otherwise the extension is swapped
+     * for the requested format (the avif/webp <source>s).
+     */
+    private function siblingKey(string $key, string $name, ?string $format): string
     {
-        $dir = dirname($path);
+        $dot  = strrpos($key, needle: '.');
+        $base = false === $dot ? $key : substr($key, offset: 0, length: $dot);
+        $ext  = match (true) {
+            null !== $format => ".{$format}",
+            false !== $dot => substr($key, $dot),
+            default => '',
+        };
 
-        return ($dir === '.' || $dir === '/' || $dir === '') ? '' : $dir;
-    }
-
-    private function absoluteEncoded(string $key): string
-    {
-        $encoded = implode('/', array_map('rawurlencode', explode('/', ltrim($key, '/'))));
-
-        return $this->publicBase . '/' . $encoded;
+        return "{$base}__{$name}{$ext}";
     }
 }

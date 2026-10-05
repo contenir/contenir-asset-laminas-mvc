@@ -10,6 +10,7 @@ use Laminas\View\Helper\AbstractHelper;
 
 use function sprintf;
 use function trigger_error;
+
 use const E_USER_WARNING;
 
 /**
@@ -29,27 +30,33 @@ use const E_USER_WARNING;
  * defeat lazy loading.
  *
  * Returns raw markup — asset paths are clean and the sizes value is config.
+ *
+ * @api
+ *
+ * @mago-expect analysis:deprecated-class laminas-view deprecates AbstractHelper; moving off it is planned for 3.0.
  */
 final class StorageSources extends AbstractHelper
 {
     public function __construct(
-        private ProfileProviderService $profiles,
-        private AssetUrlBuilder $urls,
-    ) {
-    }
+        private readonly ProfileProviderService $profiles,
+        private readonly AssetUrlBuilder $urls,
+    ) {}
 
+    /**
+     * @mago-expect lint:no-boolean-flag-parameter Published template API: `$lazy` switches the srcset attribute name.
+     */
     public function __invoke(?string $path, string $profile, bool $lazy = false): string
     {
-        if ($path === null || $path === '') {
+        if (null === $path || '' === $path) {
             return '';
         }
 
         $definition = $this->profiles->get($profile);
-        if ($definition === null) {
+        if (null === $definition) {
             trigger_error(sprintf('StorageSources: unknown image profile "%s".', $profile), E_USER_WARNING);
             return '';
         }
-        if ($definition->variants === []) {
+        if ([] === $definition->variants) {
             return '';
         }
 
@@ -63,7 +70,7 @@ final class StorageSources extends AbstractHelper
                 $format,
                 $srcsetAttr,
                 $srcset,
-                $definition->sizes === '' ? '' : sprintf(' sizes="%s"', $definition->sizes),
+                '' === $definition->sizes ? '' : sprintf(' sizes="%s"', $definition->sizes),
             );
         }
 

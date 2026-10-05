@@ -10,6 +10,7 @@ use Laminas\View\Helper\AbstractHelper;
 
 use function sprintf;
 use function trigger_error;
+
 use const E_USER_WARNING;
 
 /**
@@ -19,23 +20,26 @@ use const E_USER_WARNING;
  *   data-lazysrc-srcset="<?= $this->storageSrcSet($asset->path, 'tile') ?>"
  *
  * Returns the raw value — escaping is the output context's job.
+ *
+ * @api
+ *
+ * @mago-expect analysis:deprecated-class laminas-view deprecates AbstractHelper; moving off it is planned for 3.0.
  */
 final class StorageSrcSet extends AbstractHelper
 {
     public function __construct(
-        private ProfileProviderService $profiles,
-        private AssetUrlBuilder $urls,
-    ) {
-    }
+        private readonly ProfileProviderService $profiles,
+        private readonly AssetUrlBuilder $urls,
+    ) {}
 
     public function __invoke(?string $path, string $profile): string
     {
-        if ($path === null || $path === '') {
+        if (null === $path || '' === $path) {
             return '';
         }
 
         $definition = $this->profiles->get($profile);
-        if ($definition === null) {
+        if (null === $definition) {
             trigger_error(sprintf('StorageSrcSet: unknown image profile "%s".', $profile), E_USER_WARNING);
             return '';
         }

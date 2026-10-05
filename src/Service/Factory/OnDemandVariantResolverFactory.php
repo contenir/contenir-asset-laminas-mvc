@@ -4,9 +4,12 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Service\Factory;
 
+use Contenir\Asset\Laminas\Mvc\Container\Services;
 use Contenir\Asset\Laminas\Mvc\Service\OnDemandVariantResolver;
 use Contenir\Storage\StorageManager;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use UnexpectedValueException;
 
 /**
  * Wires the resolver to the site-registered {@see StorageManager}. R2 sites must
@@ -16,8 +19,12 @@ use Psr\Container\ContainerInterface;
  */
 final class OnDemandVariantResolverFactory
 {
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws UnexpectedValueException When a dependency has the wrong type.
+     */
     public function __invoke(ContainerInterface $container): OnDemandVariantResolver
     {
-        return new OnDemandVariantResolver($container->get(StorageManager::class));
+        return new OnDemandVariantResolver(Services::get($container, StorageManager::class));
     }
 }

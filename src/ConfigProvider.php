@@ -21,32 +21,29 @@ use Laminas\Router\Http\Regex;
 final class ConfigProvider
 {
     /**
+     * laminas-cli command registration. Available on any consuming site as
+     * `vendor/bin/laminas storage:variants`.
+     *
      * @return array<string, mixed>
      */
-    public function __invoke(): array
+    public function getCliConfig(): array
     {
         return [
-            'storage'         => $this->getStorageDefaults(),
-            'router'          => $this->getRouteConfig(),
-            'controllers'     => $this->getControllerConfig(),
-            'service_manager' => $this->getServiceConfig(),
-            'view_helpers'    => $this->getViewHelperConfig(),
-            'laminas-cli'     => $this->getCliConfig(),
+            'commands' => [
+                'storage:variants' => Command\VariantsCommand::class,
+            ],
         ];
     }
 
     /**
-     * On-disk + URL base for locating originals and prefixing URLs. Override per
-     * site in config/autoload/storage.global.php.
-     *
      * @return array<string, mixed>
      */
-    public function getStorageDefaults(): array
+    public function getControllerConfig(): array
     {
         return [
-            'asset' => [
-                'root_path'   => 'public',
-                'public_path' => '',
+            'factories' => [
+                Controller\AssetVariantController::class         => Controller\Factory\AssetVariantControllerFactory::class,
+                Controller\AssetVariantGenerateController::class => Controller\Factory\AssetVariantGenerateControllerFactory::class,
             ],
         ];
     }
@@ -58,7 +55,7 @@ final class ConfigProvider
     {
         return [
             'routes' => [
-                'assetvariant' => [
+                'assetvariant'          => [
                     'type'    => Regex::class,
                     'options' => [
                         'regex'    => '/asset/(?<folder>.+?)/_variant/(?<name>[A-Za-z0-9_-]+)/(?<filename>[^/]+)',
@@ -86,45 +83,32 @@ final class ConfigProvider
     /**
      * @return array<string, mixed>
      */
-    public function getControllerConfig(): array
-    {
-        return [
-            'factories' => [
-                Controller\AssetVariantController::class => Controller\Factory\AssetVariantControllerFactory::class,
-                Controller\AssetVariantGenerateController::class =>
-                    Controller\Factory\AssetVariantGenerateControllerFactory::class,
-            ],
-        ];
-    }
-
-    /**
-     * @return array<string, mixed>
-     */
     public function getServiceConfig(): array
     {
         return [
             'factories' => [
-                Service\ProfileProviderService::class => Service\Factory\ProfileProviderServiceFactory::class,
-                Service\AssetUrlBuilder::class        => Service\Factory\AssetUrlBuilderFactory::class,
-                Service\VariantGenerator::class       => Service\Factory\VariantGeneratorFactory::class,
+                Service\ProfileProviderService::class  => Service\Factory\ProfileProviderServiceFactory::class,
+                Service\AssetUrlBuilder::class         => Service\Factory\AssetUrlBuilderFactory::class,
+                Service\VariantGenerator::class        => Service\Factory\VariantGeneratorFactory::class,
                 Service\OnDemandVariantResolver::class => Service\Factory\OnDemandVariantResolverFactory::class,
-                ImageResizer::class                   => Service\Factory\ImageResizerFactory::class,
-                Command\VariantsCommand::class        => Command\VariantsCommandFactory::class,
+                ImageResizer::class                    => Service\Factory\ImageResizerFactory::class,
+                Command\VariantsCommand::class         => Command\VariantsCommandFactory::class,
             ],
         ];
     }
 
     /**
-     * laminas-cli command registration. Available on any consuming site as
-     * `vendor/bin/laminas storage:variants`.
+     * On-disk + URL base for locating originals and prefixing URLs. Override per
+     * site in config/autoload/storage.global.php.
      *
      * @return array<string, mixed>
      */
-    public function getCliConfig(): array
+    public function getStorageDefaults(): array
     {
         return [
-            'commands' => [
-                'storage:variants' => Command\VariantsCommand::class,
+            'asset' => [
+                'root_path'   => 'public',
+                'public_path' => '',
             ],
         ];
     }
@@ -151,6 +135,21 @@ final class ConfigProvider
                 View\Helper\StorageSources::class => View\Helper\Factory\StorageSourcesFactory::class,
                 View\Helper\StorageSizes::class   => View\Helper\Factory\StorageSizesFactory::class,
             ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function __invoke(): array
+    {
+        return [
+            'storage'         => $this->getStorageDefaults(),
+            'router'          => $this->getRouteConfig(),
+            'controllers'     => $this->getControllerConfig(),
+            'service_manager' => $this->getServiceConfig(),
+            'view_helpers'    => $this->getViewHelperConfig(),
+            'laminas-cli'     => $this->getCliConfig(),
         ];
     }
 }

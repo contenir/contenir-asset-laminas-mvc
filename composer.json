@@ -4,19 +4,20 @@
     "type": "library",
     "license": "MIT",
     "require": {
-        "php": "^8.1 || ^8.2 || ^8.3",
-        "contenir/storage": "^0.6.1",
+        "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+        "contenir/storage": "^0.6.1 || ^2.0",
         "laminas/laminas-cli": "^1.8",
         "laminas/laminas-http": "^2.0",
-        "laminas/laminas-mvc": "^3.0",
+        "laminas/laminas-mvc": "^3.8",
         "laminas/laminas-router": "^3.0",
         "laminas/laminas-view": "^2.0",
-        "psr/container": "^1.0 || ^2.0"
+        "psr/container": "^1.1 || ^2.0",
+        "symfony/console": "^6.4.10 || ^7.1.3"
     },
     "require-dev": {
-        "league/flysystem-memory": "^3.0",
-        "phpunit/phpunit": "^11.0",
-        "squizlabs/php_codesniffer": "^3.10"
+        "php-db/phpdb-qa-tools": "0.1.x-dev",
+        "phpunit/phpunit": "^11.5.42",
+        "symfony/string": "^6.4.10 || ^7.1.3"
     },
     "autoload": {
         "psr-4": {
@@ -29,19 +30,42 @@
         }
     },
     "scripts": {
-        "test": "phpunit",
-        "cs": "phpcs",
-        "cs-fix": "phpcbf"
+        "check": [
+            "@cs-check",
+            "@static-analysis",
+            "@test",
+            "@test-integration"
+        ],
+        "cs-check": [
+            "mago format --check",
+            "mago lint"
+        ],
+        "cs-fix": [
+            "mago format",
+            "mago lint --fix"
+        ],
+        "static-analysis": "mago analyze",
+        "test": "phpunit --colors=always --testsuite unit",
+        "test-integration": "phpunit --colors=always --testsuite integration",
+        "test-coverage": "phpunit --colors=always --coverage-clover clover.xml"
+    },
+    "config": {
+        "allow-plugins": {
+            "laminas/laminas-component-installer": true
+        },
+        "platform": {
+            "php": "8.3.99"
+        },
+        "sort-packages": true
     },
     "extra": {
+        "branch-alias": {
+            "dev-main": "2.0.x-dev"
+        },
         "laminas": {
             "module": "Contenir\\Asset\\Laminas\\Mvc"
         }
     },
-    "config": {
-        "sort-packages": true,
-        "allow-plugins": {
-            "laminas/laminas-component-installer": true
-        }
-    }
+    "minimum-stability": "dev",
+    "prefer-stable": true
 }

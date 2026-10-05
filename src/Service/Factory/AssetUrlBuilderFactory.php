@@ -4,24 +4,34 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Service\Factory;
 
+use Contenir\Asset\Laminas\Mvc\Container\Services;
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
-use Contenir\Storage\Config\StorageConfig;
+use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\ContainerInterface;
+use UnexpectedValueException;
 
 final class AssetUrlBuilderFactory
 {
+    /**
+     * @throws ContainerExceptionInterface
+     * @throws UnexpectedValueException When a dependency has the wrong type.
+     */
     public function __invoke(ContainerInterface $container): AssetUrlBuilder
     {
-        $backend = StorageConfig::primaryBackendConfig($container->get('config')['storage'] ?? null);
-        $type    = (string) ($backend['type'] ?? AssetUrlBuilder::BACKEND_LOCAL);
+        $type = Services::backendOption($container, 'type') ?? AssetUrlBuilder::BACKEND_LOCAL;
 
-        // Local serves variants under the web root (public_path); object stores
-        // serve sibling objects from the bucket's public CDN base. `publicUrl` is
-        // the storage layer's canonical key; `public_base_url` is kept as an alias.
-        $publicBase = $type === AssetUrlBuilder::BACKEND_LOCAL
-            ? (string) ($backend['public_path'] ?? '')
-            : (string) ($backend['public_base_url'] ?? $backend['publicUrl'] ?? '');
+        /**
+         * Local serves variants under the web root (public_path); object stores
+         * serve sibling objects from the bucket's public CDN base. `publicUrl` is
+         * the storage layer's canonical key; `public_base_url` is kept as an alias.
+         */
+        $publicBase = AssetUrlBuilder::BACKEND_LOCAL === $type
+            ? Services::backendOption($container, 'public_path')
+            : Services::backendOption($container, 'public_base_url') ?? Services::backendOption(
+                $container,
+                'publicUrl',
+            );
 
-        return new AssetUrlBuilder($publicBase, $type);
+        return new AssetUrlBuilder($publicBase ?? '', $type);
     }
 }

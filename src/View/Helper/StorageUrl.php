@@ -10,6 +10,7 @@ use Laminas\View\Helper\AbstractHelper;
 
 use function sprintf;
 use function trigger_error;
+
 use const E_USER_WARNING;
 
 /**
@@ -20,22 +21,25 @@ use const E_USER_WARNING;
  *   <img src="<?= $this->storageUrl($asset->path, 'tile-640') ?>">
  *
  * Returns the raw URL — escaping is the output context's job.
+ *
+ * @api
+ *
+ * @mago-expect analysis:deprecated-class laminas-view deprecates AbstractHelper; moving off it is planned for 3.0.
  */
 final class StorageUrl extends AbstractHelper
 {
     public function __construct(
-        private ProfileProviderService $profiles,
-        private AssetUrlBuilder $urls,
-    ) {
-    }
+        private readonly ProfileProviderService $profiles,
+        private readonly AssetUrlBuilder $urls,
+    ) {}
 
     public function __invoke(?string $path, ?string $variant = null, ?string $format = null): string
     {
-        if ($path === null || $path === '') {
+        if (null === $path || '' === $path) {
             return '';
         }
 
-        if ($variant === null || $variant === '') {
+        if (null === $variant || '' === $variant) {
             return $this->urls->originalUrl($path);
         }
 

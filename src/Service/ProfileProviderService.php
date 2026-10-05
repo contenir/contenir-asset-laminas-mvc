@@ -8,9 +8,11 @@ use Contenir\Asset\Laminas\Mvc\Profile\Profile;
 use Contenir\Storage\Config\VariantProfile;
 use Contenir\Storage\Variant;
 use Contenir\Storage\VariantFit;
+use InvalidArgumentException;
 
-use function array_values;
+use function array_key_exists;
 use function is_array;
+use function is_scalar;
 use function strtolower;
 
 /**
@@ -26,11 +28,16 @@ use function strtolower;
  *
  * Variant names are globally unique across profiles, so a bare name — all a
  * request URL carries — resolves to exactly one definition.
+ *
+ * @api
+ *
+ * @mago-expect lint:cyclomatic-complexity Accepts the ladder, legacy and flat declaration forms during migration.
+ * @mago-expect lint:kan-defect Accepts the ladder, legacy and flat declaration forms during migration.
  */
 final class ProfileProviderService
 {
     /** The CMS preview variant; never emitted in front-end srcset/sources. */
-    public const PREVIEW_VARIANT = 'admin-thumb';
+    public const string PREVIEW_VARIANT = 'admin-thumb';
 
     /** @var array<string, Profile> */
     private array $profiles = [];
@@ -39,7 +46,11 @@ final class ProfileProviderService
     private array $variants = [];
 
     /**
-     * @param array<string, mixed> $profiles Art-directed variant declarations.
+     * @param array<array-key, mixed> $profiles Art-directed variant declarations.
+     *
+     * @throws InvalidArgumentException If a `dimensions` ladder is malformed.
+     *
+     * @mago-expect analysis:mixed-assignment Profile declarations are untyped config; each is validated here.
      */
     public function __construct(array $profiles)
     {
@@ -48,32 +59,79 @@ final class ProfileProviderService
                 continue;
             }
 
-            if (isset($config['dimensions'])) {
-                $this->addFamily((string) $key, $config);
-                continue;
-            }
-
-            if (isset($config['variants'])) {
-                $this->addLegacyProfile((string) $key, $config);
-                continue;
-            }
-
-            // Flat standalone variant (e.g. the admin-thumb preview): registered
-            // for lookup, never a responsive profile.
-            if (isset($config['width'])) {
-                $this->variants[(string) $key] = $this->buildVariant((string) $key, $config);
-            }
+            $key = (string) $key;
+            match (true) {
+                null !== ($config['dimensions'] ?? null) => $this->addFamily($key, $config),
+                null !== ($config['variants'] ?? null) => $this->addLegacyProfile($key, $config),
+                /**
+                 * A flat standalone variant (e.g. the admin-thumb preview) is
+                 * registered for lookup, but is never a responsive profile.
+                 */
+                null !== ($config['width'] ?? null) => $this->variants[$key] = self::buildVariant($key, $config),
+                default => null,
+            };
         }
     }
 
-    public function has(string $key): bool
+    /**
+     * @param array<array-key, mixed> $config
+     *
+     * @mago-expect analysis:mixed-assignment Variant declarations are untyped config; validated here.
+     */
+    private static function buildVariant(string $name, array $config): Variant
     {
-        return isset($this->profiles[$key]);
+        $quality = $config['quality'] ?? null;
+
+        return new Variant(
+            $name,
+            self::int($config['width'] ?? 0),
+            self::int($config['height'] ?? 0),
+            match (strtolower(self::string($config['fit'] ?? 'cover'))) {
+                'contain' => VariantFit::Contain,
+                'fill'    => VariantFit::Fill,
+                default   => VariantFit::Cover,
+            },
+            [],
+            null === $quality ? null : self::int($quality),
+        );
+    }
+
+    /**
+     * @param array<array-key, mixed> $config
+     *
+     * @return list<string>
+     *
+     * @mago-expect analysis:mixed-assignment Format lists are untyped config; each entry is cast here.
+     */
+    private static function formats(array $config): array
+    {
+        $declared = $config['formats'] ?? [];
+        $formats  = [];
+        foreach (is_array($declared) ? $declared : [$declared] as $format) {
+            $formats[] = strtolower(self::string($format));
+        }
+
+        return $formats;
+    }
+
+    private static function int(mixed $value): int
+    {
+        return is_scalar($value) ? (int) $value : 0;
+    }
+
+    private static function string(mixed $value): string
+    {
+        return is_scalar($value) ? (string) $value : '';
     }
 
     public function get(string $key): ?Profile
     {
         return $this->profiles[$key] ?? null;
+    }
+
+    public function has(string $key): bool
+    {
+        return array_key_exists($key, $this->profiles);
     }
 
     public function variant(string $name): ?Variant
@@ -82,10 +140,13 @@ final class ProfileProviderService
     }
 
     /**
-     * @param array<string, mixed> $config
+     * @param array<array-key, mixed> $config
+     *
+     * @throws InvalidArgumentException If the ladder is malformed.
      */
     private function addFamily(string $key, array $config): void
     {
+        /** @var array<string, mixed> $config Config keys are strings. */
         $profile = VariantProfile::fromArray($key, $config);
         foreach ($profile->variants as $variant) {
             $this->variants[$variant->name] = $variant;
@@ -95,77 +156,37 @@ final class ProfileProviderService
             return;
         }
 
-        $this->profiles[$key] = new Profile(
-            $key,
-            $profile->sizes,
-            $this->formats($config),
-            $profile->variants,
-        );
+        $this->profiles[$key] = new Profile($key, $profile->sizes, self::formats($config), $profile->variants);
     }
 
     /**
-     * @param array<string, mixed> $config
+     * @param array<array-key, mixed> $config
+     *
+     * @mago-expect analysis:mixed-assignment Legacy variant maps are untyped config; each entry is validated here.
      */
     private function addLegacyProfile(string $key, array $config): void
     {
+        $declared   = $config['variants'] ?? null;
         $responsive = [];
-        foreach ((array) $config['variants'] as $name => $variantConfig) {
+        foreach (is_array($declared) ? $declared : [] as $name => $variantConfig) {
             $name = (string) $name;
             if (! is_array($variantConfig)) {
                 continue;
             }
 
-            $variant               = $this->buildVariant($name, $variantConfig);
+            $variant               = self::buildVariant($name, $variantConfig);
             $this->variants[$name] = $variant;
-            if ($name !== self::PREVIEW_VARIANT) {
+            if (self::PREVIEW_VARIANT !== $name) {
                 $responsive[] = $variant;
             }
         }
 
+        $sizes                = $config['sizes'] ?? '';
         $this->profiles[$key] = new Profile(
             $key,
-            (string) ($config['sizes'] ?? ''),
-            $this->formats($config),
-            array_values($responsive),
+            is_scalar($sizes) ? (string) $sizes : '',
+            self::formats($config),
+            $responsive,
         );
-    }
-
-    /**
-     * @param array<string, mixed> $config
-     *
-     * @return list<string>
-     */
-    private function formats(array $config): array
-    {
-        $formats = [];
-        foreach ((array) ($config['formats'] ?? []) as $format) {
-            $formats[] = strtolower((string) $format);
-        }
-
-        return $formats;
-    }
-
-    /**
-     * @param array<string, mixed> $config
-     */
-    private function buildVariant(string $name, array $config): Variant
-    {
-        return new Variant(
-            $name,
-            (int) ($config['width'] ?? 0),
-            (int) ($config['height'] ?? 0),
-            $this->fit(strtolower((string) ($config['fit'] ?? 'cover'))),
-            [],
-            isset($config['quality']) ? (int) $config['quality'] : null,
-        );
-    }
-
-    private function fit(string $fit): VariantFit
-    {
-        return match ($fit) {
-            'contain' => VariantFit::Contain,
-            'fill'    => VariantFit::Fill,
-            default   => VariantFit::Cover,
-        };
     }
 }

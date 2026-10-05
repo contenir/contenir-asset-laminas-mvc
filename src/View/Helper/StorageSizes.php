@@ -11,17 +11,21 @@ use Laminas\View\Helper\AbstractHelper;
  * Render the configured `sizes` attribute value for a named profile:
  *
  *   sizes="<?= $this->storageSizes('tile') ?>"
+ *
+ * @api
+ *
+ * @mago-expect analysis:deprecated-class laminas-view deprecates AbstractHelper; moving off it is planned for 3.0.
  */
 final class StorageSizes extends AbstractHelper
 {
-    public function __construct(private ProfileProviderService $profiles)
-    {
-    }
+    public function __construct(
+        private readonly ProfileProviderService $profiles,
+    ) {}
 
     public function __invoke(string $profile): string
     {
         $definition = $this->profiles->get($profile);
 
-        return $definition === null ? '' : $definition->sizes;
+        return null === $definition ? '' : $definition->sizes;
     }
 }
