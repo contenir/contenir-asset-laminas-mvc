@@ -58,3 +58,16 @@ service, instead of a `TypeError`.
 
 An empty `root_path` now falls back to `public`, and an empty `binary` to
 auto-discovery, instead of being used as-is.
+
+## Storage package renamed in 2.2
+
+From 2.2, this package requires `contenir/contenir-storage` ^2.2, the renamed
+`contenir/storage`. The new package declares `replace` for the old name, so
+the two can never be installed together. If your application requires
+`contenir/storage` directly, switch it:
+
+```bash
+composer remove contenir/storage && composer require contenir/contenir-storage:^2.2
+```
+
+No code changes are needed: namespaces and classes are unchanged.

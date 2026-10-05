@@ -5,12 +5,12 @@
 
 Laminas MVC module for Contenir assets: keyed, profile-driven responsive image
 variants (including WebP and AVIF) on top of
-[contenir/storage](https://github.com/contenir/storage).
+[contenir/contenir-storage](https://github.com/contenir/contenir-storage).
 
 A template names one profile (for example `'card'`) and gets the whole
 responsive set: srcset ladder, `sizes` attribute and `<picture>` sources in
 extra formats. The profiles are the same `storage.variants` declarations the
-CMS and `contenir/storage` read, so there is one source of truth.
+CMS and `contenir/contenir-storage` read, so there is one source of truth.
 
 - **View helpers:** `storageSrcSet()`, `storageSizes()`, `storageSources()` and `storageUrl()`.
 - **On-demand variants:** a route and controller that generate a missing local
@@ -21,7 +21,7 @@ CMS and `contenir/storage` read, so there is one source of truth.
 ## Requirements
 
 - PHP 8.3, 8.4 or 8.5
-- `contenir/storage` 2.x (use contenir-asset-laminas-mvc 2.0 for storage 0.6)
+- `contenir/contenir-storage` 2.2+, formerly `contenir/storage` (use contenir-asset-laminas-mvc 2.0 for storage 0.6)
 - laminas-mvc 3.8+, laminas-view 2, symfony/console 6.4.10+ or 7.1.3+, laminas-router 3, laminas-http 2, laminas-cli 1.8+
 - ImageMagick (imagick extension or `magick`/`convert` CLI) for local generation
 
@@ -36,7 +36,7 @@ otherwise add `Contenir\Asset\Laminas\Mvc` to `config/modules.config.php`.
 
 ## Configuration
 
-Everything lives under the `storage` key that `contenir/storage` reads:
+Everything lives under the `storage` key that `contenir/contenir-storage` reads:
 
 ```php
 'storage' => [

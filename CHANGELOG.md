@@ -4,7 +4,12 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [2.2.0] - Unreleased
+
+### Changed
+
+- Requires `contenir/contenir-storage` ^2.2, the renamed `contenir/storage`.
+  See [UPGRADE-2.0.md](UPGRADE-2.0.md).
 
 ### Added
 

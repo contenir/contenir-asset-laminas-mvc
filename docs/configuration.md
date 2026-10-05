@@ -1,6 +1,6 @@
 # Configuration
 
-The module reads only the `storage` block, through `contenir/storage`'s
+The module reads only the `storage` block, through `contenir/contenir-storage`'s
 `StorageConfig::primaryBackendConfig()`:
 
 | Key on the primary backend | Used by | Default |
