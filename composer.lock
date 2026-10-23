@@ -57,25 +57,22 @@
         },
         {
             "name": "contenir/contenir-asset",
-            "version": "v2.0.0-RC1",
+            "version": "v2.0.0-RC2",
             "source": {
                 "type": "git",
                 "url": "https://github.com/contenir/contenir-asset.git",
-                "reference": "e92ecee107323f6f802c415ac92e4d68f07615b0"
+                "reference": "1d20bd1b6eba16a4b6732bf1c2d079cd7c7a8700"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/contenir/contenir-asset/zipball/e92ecee107323f6f802c415ac92e4d68f07615b0",
-                "reference": "e92ecee107323f6f802c415ac92e4d68f07615b0",
+                "url": "https://api.github.com/repos/contenir/contenir-asset/zipball/1d20bd1b6eba16a4b6732bf1c2d079cd7c7a8700",
+                "reference": "1d20bd1b6eba16a4b6732bf1c2d079cd7c7a8700",
                 "shasum": ""
             },
             "require": {
                 "contenir/contenir-db-model": "^2.0@RC",
                 "laminas/laminas-escaper": "^2.13",
-                "laminas/laminas-http": "^2.19",
-                "laminas/laminas-mvc": "^3.8",
                 "laminas/laminas-permissions-acl": "^2.16",
-                "laminas/laminas-router": "^3.13",
                 "laminas/laminas-servicemanager": "^3.22 || ^4.0",
                 "laminas/laminas-view": "^2.35",
                 "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
@@ -83,7 +80,8 @@
                 "psr/log": "^2.0 || ^3.0"
             },
             "require-dev": {
-                "php-db/phpdb-qa-tools": "0.1.x-dev",
+                "contenir/contenir-qa-tools": "0.1.x-dev",
+                "infection/infection": "^0.34.1",
                 "php-db/phpdb-sqlite": "^0.2.0",
                 "phpunit/phpunit": "^11.5.42"
             },
@@ -93,7 +91,8 @@
             "type": "library",
             "extra": {
                 "laminas": {
-                    "component": "Contenir\\Asset"
+                    "component": "Contenir\\Asset",
+                    "config-provider": "Contenir\\Asset\\ConfigProvider"
                 }
             },
             "autoload": {
@@ -105,21 +104,21 @@
             "license": [
                 "BSD-3-Clause"
             ],
-            "description": "Asset records, storage and image derivatives for laminas-mvc, on contenir-db-model",
+            "description": "Asset records, storage, image derivatives and view helpers for laminas-mvc and Mezzio, on contenir-db-model",
             "homepage": "https://contenir.com.au",
             "keywords": [
                 "asset",
                 "contenir",
                 "image",
                 "laminas",
-                "mvc"
+                "mezzio"
             ],
             "support": {
                 "docs": "https://github.com/contenir/contenir-asset/tree/main/docs",
                 "issues": "https://github.com/contenir/contenir-asset/issues",
                 "source": "https://github.com/contenir/contenir-asset"
             },
-            "time": "2026-10-06T09:49:37+00:00"
+            "time": "2026-10-23T01:28:54+00:00"
         },
         {
             "name": "contenir/contenir-db-model",
