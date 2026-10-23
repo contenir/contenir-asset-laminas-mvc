@@ -13,7 +13,10 @@
         // laminas-http builds the header line by string concatenation, so an
         // int Content-Length produces the same header as the string.
         "CastString": {
-            "ignore": ["Contenir\\Asset\\Laminas\\Mvc\\Controller\\AssetVariantController::indexAction"]
+            "ignore": [
+                "Contenir\\Asset\\Laminas\\Mvc\\Controller\\AssetVariantController::indexAction",
+                "Contenir\\Asset\\Laminas\\Mvc\\Controller\\ImageResizeController::file"
+            ]
         },
         // Symfony's Table renders a row's cells in order whatever their keys,
         // so the associative tally prints the same as its array_values().
