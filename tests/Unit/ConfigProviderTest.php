@@ -8,6 +8,7 @@ use Contenir\Asset\Laminas\Mvc\Command\VariantsCommand;
 use Contenir\Asset\Laminas\Mvc\ConfigProvider;
 use Contenir\Asset\Laminas\Mvc\Controller\AssetVariantController;
 use Contenir\Asset\Laminas\Mvc\Controller\AssetVariantGenerateController;
+use Contenir\Asset\Laminas\Mvc\Controller\ImageResizeController;
 use Contenir\Asset\Laminas\Mvc\Service\AssetUrlBuilder;
 use Contenir\Asset\Laminas\Mvc\Service\ProfileProviderService;
 use Contenir\Asset\Laminas\Mvc\Service\VariantGenerator;
@@ -55,7 +56,7 @@ final class ConfigProviderTest extends TestCase
     public function registersControllers(): void
     {
         static::assertSame(
-            [AssetVariantController::class, AssetVariantGenerateController::class],
+            [AssetVariantController::class, AssetVariantGenerateController::class, ImageResizeController::class],
             array_keys((new ConfigProvider())->getControllerConfig()['factories']),
         );
     }

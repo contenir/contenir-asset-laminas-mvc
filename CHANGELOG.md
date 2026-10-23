@@ -4,6 +4,20 @@ All notable changes to this project are documented here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project
 adheres to [Semantic Versioning](https://semver.org/).
 
+## [2.3.0] - Unreleased
+
+### Added
+
+- The `imageresize` route and `ImageResizeController`, moved here from
+  `contenir/contenir-asset`, which no longer depends on laminas-mvc. They
+  serve the deprecated `.WxH` scheme through contenir-asset's
+  `LegacyResizer`; nothing changes for sites already on it beyond
+  installing this adapter alongside the core.
+
+### Changed
+
+- Requires `contenir/contenir-asset` ^2.0@RC (RC2 or later).
+
 ## [2.2.0] - 2026-10-05
 
 ### Changed
