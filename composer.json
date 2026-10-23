@@ -4,7 +4,7 @@
     "type": "library",
     "license": "MIT",
     "require": {
-        "contenir/contenir-asset": "^2.0@RC",
+        "contenir/contenir-asset": "^2.0.0-RC2@RC",
         "contenir/contenir-storage": "^2.2",
         "laminas/laminas-cli": "^1.8",
         "laminas/laminas-http": "^2.0",
