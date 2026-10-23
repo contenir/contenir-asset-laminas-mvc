@@ -10,7 +10,9 @@ use Laminas\Router\Http\Literal;
 use Laminas\Router\Http\Regex;
 
 /**
- * Framework wiring for the keyed asset bridge. The {@see Module} returns this
+ * Framework wiring for the keyed asset bridge, and the `imageresize` route
+ * that serves contenir-asset's legacy `.WxH` scheme through its
+ * `LegacyResizer`. The {@see Module} returns this
  * from getConfig(); kept separate so the wiring is testable and a Mezzio sibling
  * could reuse the dependency map later.
  *
@@ -45,6 +47,7 @@ final class ConfigProvider
             'factories' => [
                 Controller\AssetVariantController::class         => Controller\Factory\AssetVariantControllerFactory::class,
                 Controller\AssetVariantGenerateController::class => Controller\Factory\AssetVariantGenerateControllerFactory::class,
+                Controller\ImageResizeController::class          => Controller\Factory\ImageResizeControllerFactory::class,
             ],
         ];
     }
@@ -75,6 +78,17 @@ final class ConfigProvider
                             'controller' => Controller\AssetVariantGenerateController::class,
                             'action'     => 'generate',
                         ],
+                    ],
+                ],
+                'imageresize'           => [
+                    'type'    => Regex::class,
+                    'options' => [
+                        'regex'    => '/asset/(?<folder>[a-zA-Z0-9_\-\/\%\.]+).*/\.(?<dimensions>[\d\.]+x[\d\.]*)/(?<filename>.*)',
+                        'defaults' => [
+                            'controller' => Controller\ImageResizeController::class,
+                            'action'     => 'resize',
+                        ],
+                        'spec'     => '/asset/%folder%/.%dimensions%/%filename%',
                     ],
                 ],
             ],

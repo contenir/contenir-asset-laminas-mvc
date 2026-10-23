@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "fa84b0a37b5e058b238be5859da70c60",
+    "content-hash": "0a6cba69cfbd7e0a5b77ae9bf16174f8",
     "packages": [
         {
             "name": "brick/varexporter",
@@ -54,6 +54,132 @@
                 }
             ],
             "time": "2025-02-20T17:42:39+00:00"
+        },
+        {
+            "name": "contenir/contenir-asset",
+            "version": "v2.0.0-RC1",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/contenir/contenir-asset.git",
+                "reference": "e92ecee107323f6f802c415ac92e4d68f07615b0"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/contenir/contenir-asset/zipball/e92ecee107323f6f802c415ac92e4d68f07615b0",
+                "reference": "e92ecee107323f6f802c415ac92e4d68f07615b0",
+                "shasum": ""
+            },
+            "require": {
+                "contenir/contenir-db-model": "^2.0@RC",
+                "laminas/laminas-escaper": "^2.13",
+                "laminas/laminas-http": "^2.19",
+                "laminas/laminas-mvc": "^3.8",
+                "laminas/laminas-permissions-acl": "^2.16",
+                "laminas/laminas-router": "^3.13",
+                "laminas/laminas-servicemanager": "^3.22 || ^4.0",
+                "laminas/laminas-view": "^2.35",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+                "psr/container": "^1.1 || ^2.0",
+                "psr/log": "^2.0 || ^3.0"
+            },
+            "require-dev": {
+                "php-db/phpdb-qa-tools": "0.1.x-dev",
+                "php-db/phpdb-sqlite": "^0.2.0",
+                "phpunit/phpunit": "^11.5.42"
+            },
+            "suggest": {
+                "ext-intl": "Transliterates accented characters in stored asset file names"
+            },
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "component": "Contenir\\Asset"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Contenir\\Asset\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Asset records, storage and image derivatives for laminas-mvc, on contenir-db-model",
+            "homepage": "https://contenir.com.au",
+            "keywords": [
+                "asset",
+                "contenir",
+                "image",
+                "laminas",
+                "mvc"
+            ],
+            "support": {
+                "docs": "https://github.com/contenir/contenir-asset/tree/main/docs",
+                "issues": "https://github.com/contenir/contenir-asset/issues",
+                "source": "https://github.com/contenir/contenir-asset"
+            },
+            "time": "2026-10-06T09:49:37+00:00"
+        },
+        {
+            "name": "contenir/contenir-db-model",
+            "version": "v2.0.0-rc5",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/contenir/contenir-db-model.git",
+                "reference": "e699fa92fbdf24a8b3ee42dcf0c518c47feb7170"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/contenir/contenir-db-model/zipball/e699fa92fbdf24a8b3ee42dcf0c518c47feb7170",
+                "reference": "e699fa92fbdf24a8b3ee42dcf0c518c47feb7170",
+                "shasum": ""
+            },
+            "require": {
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0",
+                "php-db/phpdb": "0.6.x-dev",
+                "psr/container": "^1.1 || ^2.0",
+                "psr/simple-cache": "^1.0 || ^2.0 || ^3.0"
+            },
+            "require-dev": {
+                "contenir/contenir-qa-tools": "0.1.x-dev",
+                "infection/infection": "^0.34.1",
+                "php-db/phpdb-mysql": "^0.4.0",
+                "php-db/phpdb-pgsql": "0.1.x-dev",
+                "php-db/phpdb-sqlite": "^0.2.0",
+                "phpunit/phpunit": "^11.5.42"
+            },
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "component": "Contenir\\Db\\Model",
+                    "config-provider": "Contenir\\Db\\Model\\ConfigProvider"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Contenir\\Db\\Model\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Attribute-mapped, typed-property data mapper built on php-db/phpdb",
+            "homepage": "https://contenir.com.au",
+            "keywords": [
+                "contenir",
+                "data-mapper",
+                "orm",
+                "php-db",
+                "repository"
+            ],
+            "support": {
+                "docs": "https://docs.contenir.com.au/contenir-db-model/",
+                "issues": "https://github.com/contenir/contenir-db-model/issues",
+                "source": "https://github.com/contenir/contenir-db-model"
+            },
+            "time": "2026-10-18T01:53:15+00:00"
         },
         {
             "name": "contenir/contenir-storage",
@@ -719,6 +845,70 @@
                 }
             ],
             "time": "2024-11-18T00:14:29+00:00"
+        },
+        {
+            "name": "laminas/laminas-permissions-acl",
+            "version": "2.18.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/laminas/laminas-permissions-acl.git",
+                "reference": "5940f6e7b9e2e3eba671f13dd26e610d2fe9acc3"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/laminas/laminas-permissions-acl/zipball/5940f6e7b9e2e3eba671f13dd26e610d2fe9acc3",
+                "reference": "5940f6e7b9e2e3eba671f13dd26e610d2fe9acc3",
+                "shasum": ""
+            },
+            "require": {
+                "php": "~8.2.0 || ~8.3.0 || ~8.4.0 || ~8.5.0"
+            },
+            "conflict": {
+                "laminas/laminas-servicemanager": "<3.0",
+                "zendframework/zend-permissions-acl": "*"
+            },
+            "require-dev": {
+                "laminas/laminas-coding-standard": "^3.0.1",
+                "laminas/laminas-servicemanager": "^3.21",
+                "phpbench/phpbench": "^1.2.10",
+                "phpunit/phpunit": "^10.5.58",
+                "psalm/plugin-phpunit": "^0.19.0",
+                "vimeo/psalm": "^6.13.1"
+            },
+            "suggest": {
+                "laminas/laminas-servicemanager": "To support Laminas\\Permissions\\Acl\\Assertion\\AssertionManager plugin manager usage"
+            },
+            "type": "library",
+            "autoload": {
+                "psr-4": {
+                    "Laminas\\Permissions\\Acl\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Provides a lightweight and flexible access control list (ACL) implementation for privileges management",
+            "homepage": "https://laminas.dev",
+            "keywords": [
+                "acl",
+                "laminas"
+            ],
+            "support": {
+                "chat": "https://laminas.dev/chat",
+                "docs": "https://docs.laminas.dev/laminas-permissions-acl/",
+                "forum": "https://discourse.laminas.dev",
+                "issues": "https://github.com/laminas/laminas-permissions-acl/issues",
+                "rss": "https://github.com/laminas/laminas-permissions-acl/releases.atom",
+                "source": "https://github.com/laminas/laminas-permissions-acl"
+            },
+            "funding": [
+                {
+                    "url": "https://funding.communitybridge.org/projects/laminas-project",
+                    "type": "community_bridge"
+                }
+            ],
+            "time": "2025-11-03T09:15:20+00:00"
         },
         {
             "name": "laminas/laminas-router",
@@ -1432,6 +1622,73 @@
             "time": "2026-09-13T18:51:52+00:00"
         },
         {
+            "name": "php-db/phpdb",
+            "version": "0.6.x-dev",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-db/phpdb.git",
+                "reference": "e9dd92db553daae79ddc4ff197b20fe7bbdf6b10"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-db/phpdb/zipball/e9dd92db553daae79ddc4ff197b20fe7bbdf6b10",
+                "reference": "e9dd92db553daae79ddc4ff197b20fe7bbdf6b10",
+                "shasum": ""
+            },
+            "require": {
+                "laminas/laminas-servicemanager": "^3.0.0 || ^4.0.0",
+                "laminas/laminas-stdlib": "^3.20.0",
+                "php": "~8.3.0 || ~8.4.0 || ~8.5.0"
+            },
+            "conflict": {
+                "zendframework/zend-db": "*"
+            },
+            "require-dev": {
+                "infection/infection": "^0.34.1",
+                "laminas/laminas-eventmanager": "^3.14.0",
+                "laminas/laminas-hydrator": "^4.6.0",
+                "php-db/phpdb-qa-tools": "0.1.x-dev",
+                "phpbench/phpbench": "^1.4",
+                "phpunit/phpunit": "^11.5.42",
+                "rector/rector": "^2.0"
+            },
+            "suggest": {
+                "laminas/laminas-eventmanager": "Laminas\\EventManager component",
+                "laminas/laminas-hydrator": "(^5.0.0) Laminas\\Hydrator component for using HydratingResultSets"
+            },
+            "default-branch": true,
+            "type": "library",
+            "extra": {
+                "laminas": {
+                    "config-provider": "PhpDb\\ConfigProvider"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "PhpDb\\": "src/",
+                    "CustomRule\\PHPUnit\\": "rector/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "BSD-3-Clause"
+            ],
+            "description": "Database abstraction layer, SQL abstraction, result set abstraction, and RowDataGateway and TableDataGateway implementations",
+            "homepage": "https://php-db.dev",
+            "keywords": [
+                "db",
+                "laminas",
+                "mezzio",
+                "php-db"
+            ],
+            "support": {
+                "docs": "https://docs.php-db.dev/",
+                "issues": "https://github.com/php-db/phpdb/issues",
+                "source": "https://github.com/php-db/phpdb"
+            },
+            "time": "2026-10-12T05:05:03+00:00"
+        },
+        {
             "name": "psr/container",
             "version": "1.1.2",
             "source": {
@@ -1631,6 +1888,57 @@
                 "source": "https://github.com/php-fig/log/tree/3.0.2"
             },
             "time": "2024-09-11T13:17:53+00:00"
+        },
+        {
+            "name": "psr/simple-cache",
+            "version": "3.0.0",
+            "source": {
+                "type": "git",
+                "url": "https://github.com/php-fig/simple-cache.git",
+                "reference": "764e0b3939f5ca87cb904f570ef9be2d78a07865"
+            },
+            "dist": {
+                "type": "zip",
+                "url": "https://api.github.com/repos/php-fig/simple-cache/zipball/764e0b3939f5ca87cb904f570ef9be2d78a07865",
+                "reference": "764e0b3939f5ca87cb904f570ef9be2d78a07865",
+                "shasum": ""
+            },
+            "require": {
+                "php": ">=8.0.0"
+            },
+            "type": "library",
+            "extra": {
+                "branch-alias": {
+                    "dev-master": "3.0.x-dev"
+                }
+            },
+            "autoload": {
+                "psr-4": {
+                    "Psr\\SimpleCache\\": "src/"
+                }
+            },
+            "notification-url": "https://packagist.org/downloads/",
+            "license": [
+                "MIT"
+            ],
+            "authors": [
+                {
+                    "name": "PHP-FIG",
+                    "homepage": "https://www.php-fig.org/"
+                }
+            ],
+            "description": "Common interfaces for simple caching",
+            "keywords": [
+                "cache",
+                "caching",
+                "psr",
+                "psr-16",
+                "simple-cache"
+            ],
+            "support": {
+                "source": "https://github.com/php-fig/simple-cache/tree/3.0.0"
+            },
+            "time": "2021-10-29T13:26:27+00:00"
         },
         {
             "name": "symfony/console",
@@ -5985,6 +6293,7 @@
     "aliases": [],
     "minimum-stability": "dev",
     "stability-flags": {
+        "contenir/contenir-asset": 5,
         "contenir/contenir-qa-tools": 20
     },
     "prefer-stable": true,

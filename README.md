@@ -17,11 +17,15 @@ CMS and `contenir/contenir-storage` read, so there is one source of truth.
   variant on first request, and a secret-guarded endpoint an edge worker calls
   to generate a missing S3/R2 sibling.
 - **CLI:** `storage:variants` to audit and backfill a backend.
+- **Legacy resize route:** `imageresize` serves contenir-asset's deprecated
+  `.WxH` scheme (`/asset/<folder>/.480x/<file>`, as `assetSrcSet()` emits)
+  through its `LegacyResizer`, for sites that still use it.
 
 ## Requirements
 
 - PHP 8.3, 8.4 or 8.5
 - `contenir/contenir-storage` 2.2+, formerly `contenir/storage` (use contenir-asset-laminas-mvc 2.0 for storage 0.6)
+- `contenir/contenir-asset` 2.0 (RC2 or later) for the legacy resize route
 - laminas-mvc 3.8+, laminas-view 2, symfony/console 6.4.10+ or 7.1.3+, laminas-router 3, laminas-http 2, laminas-cli 1.8+
 - ImageMagick (imagick extension or `magick`/`convert` CLI) for local generation
 

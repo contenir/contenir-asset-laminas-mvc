@@ -4,9 +4,11 @@ declare(strict_types=1);
 
 namespace Contenir\Asset\Laminas\Mvc\Tests\Integration;
 
+use Contenir\Asset\Image\LegacyResizer;
 use Contenir\Asset\Laminas\Mvc\Command\VariantsCommand;
 use Contenir\Asset\Laminas\Mvc\Controller\AssetVariantController;
 use Contenir\Asset\Laminas\Mvc\Controller\AssetVariantGenerateController;
+use Contenir\Asset\Laminas\Mvc\Controller\ImageResizeController;
 use Contenir\Asset\Laminas\Mvc\Module;
 use Contenir\Storage\Image\ImageResizer;
 use Contenir\Storage\Image\ImageResizerInterface;
@@ -27,6 +29,8 @@ use PHPUnit\Framework\TestCase;
 /**
  * Wires the module's configuration into real laminas-servicemanager,
  * controller and view-helper plugin managers.
+ *
+ * @mago-expect analysis:deprecated-class The legacy resizer the resize route fronts.
  */
 #[Group('integration')]
 final class ModuleWiringTest extends TestCase
@@ -49,9 +53,18 @@ final class ModuleWiringTest extends TestCase
                 ['folder' => 'news/2024', 'name' => 'card-320', 'filename' => 'a.jpg'],
             ],
             'generate' => ['/asset-variant/generate', AssetVariantGenerateController::class, 'generate', []],
+            'legacy'   => [
+                '/asset/news/2024/.480x/a.jpg',
+                ImageResizeController::class,
+                'resize',
+                ['folder' => 'news/2024', 'dimensions' => '480x', 'filename' => 'a.jpg'],
+            ],
         ];
     }
 
+    /**
+     * @mago-expect analysis:deprecated-class Resolves the deprecated legacy controller too.
+     */
     #[Test]
     public function controllersResolveThroughTheControllerManager(): void
     {
@@ -62,6 +75,7 @@ final class ModuleWiringTest extends TestCase
             AssetVariantGenerateController::class,
             $controllers->get(AssetVariantGenerateController::class),
         );
+        static::assertInstanceOf(ImageResizeController::class, $controllers->get(ImageResizeController::class));
     }
 
     #[Test]
@@ -123,6 +137,7 @@ final class ModuleWiringTest extends TestCase
         $this->services                      = new ServiceManager($this->config['service_manager']);
         $this->services->setService('config', $this->config);
         $this->services->setService(StorageManager::class, new StorageManager());
+        $this->services->setService(LegacyResizer::class, new LegacyResizer());
         $this->services->setService('EventManager', new EventManager(new SharedEventManager()));
         $this->services->setService('SharedEventManager', new SharedEventManager());
         $this->services->setService('ControllerPluginManager', new PluginManager($this->services));
